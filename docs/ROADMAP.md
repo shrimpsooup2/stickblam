@@ -7,28 +7,36 @@
 Build order is driven by risk, not by feature list. These are the things that,
 if wrong, invalidate the design. Test them in this order.
 
-1. **Is building mid-match fun, or does it break combat flow?**
+1. **Does ink-as-ammo pressure players outward, or just starve them?**
+   The whole economy now rests on it: parts burn ink per shot, so nobody can build
+   a good gun and turtle. The failure mode is a match where players spend most of
+   their time unable to run their build, watching a fun system they can't afford.
+   *Tested in Phase 2 alongside the loop. Measure: what fraction of shots fired are
+   fired with a full build vs. a dry one? Below ~50% and the rates are wrong.*
+
+2. **Is building mid-match fun, or does it break combat flow?**
    The 2-second vulnerable draw animation is the tensest moment on paper and could
    be the most hated thing in the game. If stopping to build feels bad, the whole
    gimmick needs restructuring (build-at-stations-only, or instant builds).
    *Tested in Phase 2. Cheapest possible version: one gun, one part, two players.*
 
-2. **Is the compatibility system legible under combat pressure?**
+3. **Is the compatibility system legible under combat pressure?**
    Biggest long-term risk. A system players experience as randomness is worse than
    no system. *Tested in Phase 3 with six parts and three combos — if three combos
    already feel like noise, forty will be catastrophic.*
 
-3. **Does the snowball ruin matches?**
-   The self-balancing bounty is a theory. *Tested in Phase 2, measured: track
-   ink-share over match time. If the leader's share monotonically rises past ~40%
-   by mid-match, the rubber band isn't working.*
+4. **Does the snowball ruin matches — or is it now over-corrected?**
+   There are three independent brakes on getting ahead: the bounty, visible wealth,
+   and thirst. That may be one too many. *Tested in Phase 2: track ink-share over
+   match time, but also ask the leading player whether winning felt good. A game
+   that punishes doing well is its own failure.*
 
-4. **Do flat stickmen read at combat range?**
+5. **Do flat stickmen read at combat range?**
    A 2D sprite in a 3D space can become an unreadable smudge at 40 metres, and our
    whole art direction is low-contrast greys. *Tested in Phase 0 — it's the
    cheapest test and it gates the art direction.*
 
-5. **Is a monochrome shooter actually playable?**
+6. **Is a monochrome shooter actually playable?**
    Enemy/ally/pickup/hazard separation with no hue is hard. We're betting on the
    ink-is-the-only-black rule to carry it. *Tested in Phase 0. Have a fallback: a
    single accent value reserved for enemies.*
@@ -111,13 +119,16 @@ don't let the stack question block starting.
 
 ### Phase 2 — The loop *(~4 weeks)* ← the real test
 
-- Kills grant ink. Wet ink evaporates. Death drops Blots and fills the Well.
+- Kills grant ink. Death drops Blots and fills the Well.
+- **Ink is ammo:** per-part nibs, Draw rates, auto re-wetting from the pocket, and
+  the free-firing bare weapon. This is the core of the phase.
 - **One** weapon, **three** parts, no compatibility rules at all — just stacking.
 - The 2-second vulnerable draw animation.
-- Telemetry: ink-share over time, builds-per-player-per-match, time-to-first-part.
-- **Gate:** answers risks #1 and #3. Does stopping to build feel tense-good or
-  tense-bad? Does the leader run away with it? Be genuinely willing to restructure
-  here.
+- Telemetry: ink-share over time, builds-per-player-per-match, time-to-first-part,
+  and **fraction of shots fired with a full build**.
+- **Gate:** answers risks #1, #2 and #4. Does the build draining outward-pressure
+  players, or just frustrate them? Does stopping to build feel tense-good or
+  tense-bad? Does the leader run away with it? Be genuinely willing to restructure.
 
 ### Phase 3 — Compatibility *(~4 weeks)*
 
@@ -130,11 +141,15 @@ don't let the stack question block starting.
 ### Phase 4 — Breadth *(~6 weeks)*
 
 - Full 8-weapon roster with slot layouts, ban lists, allowed media.
-- Media system with its global rules (including Marker slot-bleed).
+- Media system with its global rules and per-medium Draw rates (including Marker
+  slot-bleed).
 - ~30 parts, ~18 Combos, ~6 Bleeds, ~5 Masterpieces.
-- The Scrawl draft hand, rerolls, Inkwell stations, the Signature.
-- Second map.
-- **Gate:** a full match is legible. Nobody has to alt-tab to a wiki.
+- **Instruction cards:** map spawns, 4-slot inventory, death drops, Tracing and
+  generation degradation.
+- Inkwell stations, the Signature. Second map.
+- **Gate:** a full match is legible, and **two scarcities don't deadlock**. If
+  players routinely sit on ink they can't spend and cards they can't afford, make
+  cards more generous before anything else.
 
 ### Phase 5 — Mural *(~4 weeks)*
 
@@ -175,10 +190,11 @@ stickblam/
     parts/
     weapons/
     tables/        interaction + masterpiece tables
+    cards/         Instruction spawn tables, rarity, generation curves
     tuning.yaml    every economy number in one place
   src/
     net/           transport, replication, prediction, reconciliation
-    econ/          ink ledger, drops, Well, evaporation  — server-only
+    econ/          ink ledger, drops, Well, nib drain  — server-only
     build/         tag resolver, build hashing
     combat/        weapons, projectiles, damage
     player/        movement verbs, flatness states

@@ -1,7 +1,8 @@
 # Stickblam — Core Design
 
 > Companion docs: [INK_ECONOMY.md](INK_ECONOMY.md) (the gimmick), [PARTS.md](PARTS.md)
-> (the compatibility system), [ROADMAP.md](ROADMAP.md) (build order).
+> (parts, Instructions, compatibility), [VISUAL_DIRECTION.md](VISUAL_DIRECTION.md)
+> (art direction), [ROADMAP.md](ROADMAP.md) (build order).
 
 ---
 
@@ -27,40 +28,44 @@ game (erasing, smudging, drying, page-turning, signing your work).
 plane, not a 3D model. This is the character's core mechanical identity, not just
 a look.
 
-### The flatness question (decide early, it's load-bearing)
+### Flatness — decided
 
-| Option | How it works | Pro | Con |
-| --- | --- | --- | --- |
-| **A. Full billboard** | Sprite always faces the viewer. Everyone sees your front. | Perfectly consistent hitboxes. Reads clearly at range. Cheap. | Wastes the premise. Flatness becomes decoration. |
-| **B. True cutout** | Sprite has a real world-space facing. Edge-on you're a 1px line. | Enormous gimmick value. Strafing is a defensive act. | Hitreg nightmare, feels unfair, encourages degenerate sideways-shuffling. |
-| **C. Billboard + Edge-On (recommended)** | Sprite billboards for readability, but a dedicated action turns you sideways. | Keeps readability; makes flatness an active verb you spend, not a passive exploit. | One more button. Needs tuning so it isn't a free dodge. |
+**Paper Mario flat.** A genuine 2D drawing standing up in a 3D world, with real
+physicality as a paper object.
 
-**Recommendation: C.** Billboarding is the default so the game is legible, and
-flatness becomes a *cost-bearing ability*:
+- **Billboards by default**, so the game stays readable at range and hitboxes stay
+  honest. A true world-space cutout — invisible edge-on — was considered and
+  rejected: it makes hit registration miserable and rewards degenerate sideways
+  shuffling.
+- **Turning is a flip, not a rotation** — the sprite compresses to nothing and pops
+  out mirrored over 2–3 frames, like a card turning over.
+- **Thinness is a verb you spend.** Flatness is never a passive exploit; it's
+  always something the player deliberately did, at a cost.
 
-- **Edge-On** (hold): you rotate to face-perpendicular. Your hitbox collapses to a
-  sliver. You cannot shoot, and you move at 60% speed. It's a commitment, not a
-  twitch dodge.
-- **Flatten** (hold, against a wall): you press yourself onto the surface and
-  become part of the level's artwork. You are still shootable, but you read as
-  graffiti. Stealth for people with nerve.
-- **Paper Glide** (hold jump while falling): flat things catch air. Slow, drifting
-  descent with lateral control. Makes verticality generous and floaty.
-- **Crumple** (crouch-slide): ball up and roll. Fast, low, can't shoot, can't turn
-  sharply.
+| Verb | Input | Effect |
+| --- | --- | --- |
+| **Edge-On** | hold | Rotate perpendicular. Hitbox collapses to a sliver. Cannot shoot, 60% move speed. A commitment, not a twitch dodge. |
+| **Flatten** | hold at a wall | Press onto the surface and become part of the level's artwork. Still shootable — but you read as graffiti. |
+| **Paper Glide** | hold jump while falling | Flat things catch air. Slow drifting descent with lateral control. |
+| **Crumple** | crouch-slide | Ball up and roll. Fast, low, can't shoot, can't turn sharply. |
 
-Together these give the stickman a movement identity that no other shooter has,
-and all four are direct consequences of "you are a piece of paper."
+Together these give the stickman a movement identity no other shooter has, and all
+four are direct consequences of "you are a piece of paper."
 
-### Animation: the boil
+### Animation: choppy on purpose
 
-Everything the player does is animated at **12fps on a 60fps sim**, with line
-"boil" — every frame the linework redraws slightly differently. Two or three
-alternating versions of each pose, cycled. This single technique is 80% of the
-"hand-drawn" read and costs almost nothing.
+**8fps on a 60fps sim, with irregular holds.** This should feel like a flipbook,
+not like smooth animation running slowly. Very few unique frames — a 3-frame run
+cycle, a 2-frame idle, a 1-frame jump that never changes however long you're
+airborne. Nothing interpolates; poses pop.
 
-Proportions should be inconsistent between frames. Heads change size. A hand
-occasionally has six fingers. Lean into it.
+The crucial part: **a hold is still redrawn.** A 5-frame hold is five different
+drawings of the same pose, not one drawing shown five times. Lines boil even when
+nothing moves, because the whole world is being continuously re-drawn by whoever
+is drawing it. Proportions drift between frames — heads change size, a hand
+occasionally has six fingers. Don't correct it.
+
+Full spec in [VISUAL_DIRECTION.md §4](VISUAL_DIRECTION.md).
 
 ### Health
 
@@ -80,23 +85,15 @@ into a chase.
 **Black, white, and the greys in between — and ink is the only true black.**
 
 This is the most important art rule in the project, because it's also a game
-mechanic. The environment lives in the 15–85% grey band. Pure black is reserved
-for ink: spilled ink, ink puddles, ink parts on weapons, and heavily-inked
-players. Consequence: **wealth is visible.** A player running six scrawls is the
-highest-contrast object on screen. The snowball paints a target on itself without
-a single UI element.
+mechanic. The environment lives in the 15–85% grey band; pure black is reserved
+for ink. Consequence: **wealth and readiness are both visible.** A player running
+six full scrawls is the highest-contrast object on screen, and a player whose nibs
+have run dry has visibly faded. The snowball paints a target on itself, and the
+ammo counter is the gun.
 
-### Rendering approach
-
-- Hard two-tone toon shading, no gradients. Light or unlit, nothing between.
-- Shadow is **cross-hatching**, screen-space, at a fixed density so it reads as
-  pen strokes rather than a texture.
-- Heavy, wobbling outlines on every silhouette, thickness varying along the
-  stroke like a real pen.
-- **Paper grain stays in screen space**, not on surfaces. The whole frame sits on
-  the same sheet. This is what makes it feel like a drawing rather than a
-  cel-shaded 3D game.
-- Round transitions are a **page turn**.
+Rendering approach, the rules for hand-drawn wrongness, and the full art direction
+are in **[VISUAL_DIRECTION.md](VISUAL_DIRECTION.md)**. The short version: nothing
+in this game is perfect, straight, clean, or new.
 
 ### Level vocabulary
 
@@ -113,6 +110,10 @@ Maps are pages. Build geometry out of things that belong on paper:
   — you can shoot through them and dimly see through them. Erasure creates
   permanent tactical change to a map, which matters because players can erase too.
 - **The page edge**: the out-of-bounds. Fall off the paper and you're gone.
+- **Card spawns**: Instructions (see [PARTS.md §5](PARTS.md)) appear at rotating
+  fixed points. These are contested ground that has nothing to do with kills, which
+  gives the map a second flow independent of the fighting — and gives a losing team
+  somewhere to go that isn't a gunfight they'll lose.
 
 ### Destructible / alterable geometry
 
@@ -138,6 +139,12 @@ media**. Those three fields are what make "some parts can't go on certain
 weapons" a data problem rather than a special-case problem. Details in
 [PARTS.md](PARTS.md).
 
+**The bare implement always fires free.** Parts drink ink per shot; the weapon
+underneath does not. This is a hard floor, not a tuning number — a player with
+nothing must never be unable to shoot, or the match death-spirals the moment
+someone falls behind. Run completely dry and you're back to a bare Biro: a
+functional if unexciting gun. The pen still works; the attachments just ran out.
+
 ### Launch roster (8)
 
 | Weapon | Role | Slots | Notable restriction |
@@ -148,13 +155,14 @@ weapons" a data problem rather than a special-case problem. Details in
 | **Marker** | Shotgun. Bold, short, wide strokes. | 3 (Muzzle, Body, Grip) | Marker ink **bleeds into adjacent slots** — your parts interact whether you wanted them to or not. |
 | **Spraycan** | Launcher. Arcing blobs, area denial. | 3 (Nozzle, Body, Reservoir) | Bans `PRECISION`, `PIERCE`. |
 | **Eraser** | Short-range cone. Low lethality; **strips enemy parts.** | 2 (Body, Grip) | Bans all `PROJECTILE` tags. It doesn't shoot, it un-draws. |
-| **Stapler** | Nailgun. Physical ammo, not ink. | 3 (Body, Magazine, Grip) | Bans **every ink medium**. Only accepts `PHYSICAL` parts. The weapon you use when you're broke. |
+| **Stapler** | Nailgun. Fires scarce map-found staples, not ink. | 3 (Body, Magazine, Grip) | Bans **every ink medium**. Only accepts `PHYSICAL` parts. Sits entirely outside the ink economy. |
 | **Highlighter** | Support beam. Marks enemies, boosts allied ink gain. | 3 (Muzzle, Body, Sight) | Cannot deal killing damage. Can only bring an enemy to 1 HP. |
 
 The Eraser and the Stapler exist specifically to be the awkward ones. The Eraser
-is the comeback tool — a broke player can mug a rich one without out-gunning
-them. The Stapler is the ink-independent option, so there is always *something*
-useful to do with zero ink.
+is the comeback tool — a broke player can mug a rich one without out-gunning them,
+and it strips dry parts first. The Stapler is the genuinely ink-independent
+option: its ammo is a physical pickup, so a player with zero ink and zero cards
+still has a real weapon to fight over.
 
 ### Weapon acquisition
 
@@ -163,9 +171,11 @@ implements sit on pedestals and in contested spots, on a respawn timer. Switchin
 weapons **does not** carry your parts over — your scrawls are drawn on *that gun*.
 Picking up a Fineliner when you've got a fully-built Biro is a genuine sacrifice.
 
-> **Variation worth testing:** a `Trace` action that transfers parts to a new
-> weapon at ~50% ink loss, taking 4 seconds. Softens the sacrifice; may make
-> weapon pickups feel less momentous. Prototype both.
+Your **Instructions** do carry over, though — the card is knowledge, not a
+drawing on a specific gun. So swapping weapons costs you your built parts but not
+your ability to rebuild, which keeps a weapon pickup exciting rather than
+punishing. (`Trace` is a separate action for copying cards, not for moving parts —
+see [PARTS.md §5](PARTS.md).)
 
 ---
 
@@ -180,6 +190,8 @@ Picking up a Fineliner when you've got a fully-built Biro is a genuine sacrifice
   geometry behind the target. After a firefight you can read what happened off the
   walls.
 - **No hitmarkers.** You know you hit because the enemy visibly got scribbled on.
+- **No ammo counter.** Parts fade toward ghost outlines as their nibs empty, so
+  your remaining uptime is legible off the weapon itself — and off the enemy's.
 - **Killcam shows the killer's full build**, part by part, with the combos
   highlighted. This is the primary teaching tool for the part system — see
   [PARTS.md §6](PARTS.md).
@@ -195,6 +207,9 @@ fills in your team's drawing. First team to complete the mural wins.**
 
 This is the flagship because it puts the game's central tension in the objective
 itself: *every point of ink you spend on your gun is a point not in the mural.*
+Since ink is also ammunition, depositing now **literally disarms you** — you walk
+away from the wall with drier nibs than you arrived with. A team that is winning
+the mural is a team fighting dry, which is a rubber band built into the objective.
 Building makes you more likely to win fights and less likely to win the match.
 Then when you die, your invested ink drops for the enemy to carry to *their*
 mural. The greedy player is literally funding the other team's artwork.
@@ -243,13 +258,6 @@ snowbally, great for six players and a voice call.
 
 ## 8. Audio
 
-Monochrome visuals mean audio does a lot of load-bearing work.
-
-- Weapons sound like **implements on paper**: pen scratch, marker squeak, the dry
-  hiss of a spraycan, the rubber drag of an eraser.
-- **Every combo has a distinct sting** when it first activates. This is a teaching
-  tool as much as a reward.
-- Ink pickup: a wet, satisfying *blot*.
-- Death: paper crumpling.
-- The Hand is audible before it's visible — pencil scratch from off-screen during
-  events.
+Monochrome visuals mean audio carries more than usual — weapons sound like
+implements on paper, every combo gets a distinct sting, death is paper crumpling.
+Details in [VISUAL_DIRECTION.md §8](VISUAL_DIRECTION.md).
