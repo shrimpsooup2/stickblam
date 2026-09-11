@@ -39,10 +39,11 @@ export const T = {
   glideRecoverTime:    0.95,  // you land flat and have to get up
 
   // --- Crumple: hold crouch and roll ---
-  crumpleFriction:     0.85,  // low, not frictionless: it should coast, not glide forever
+  crumpleFriction:     1.00,  // coasts, but visibly bleeds speed
+  crumpleStopSpeed:    0.20,  // no braking floor: a ball keeps rolling at low speed
   crumpleAccel:        9.0,   // and you can barely steer it
-  crumpleMaxSpeed:     9.6,   // a modest edge over the 7.6 walk, not a rocket
-  crumpleEnterBoost:   1.2,
+  crumpleMaxSpeed:     6.80,  // BELOW the 7.6 walk: rolling is not a sprint
+  crumpleEnterBoost:   0.0,   // no push on entry -- you only keep what you had
   crumpleHeightMult:      0.42,
   crumpleJumpMult:        0.72,
   crumpleBounce:          0.32,  // keeps a little vertical energy on landing

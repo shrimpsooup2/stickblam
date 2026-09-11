@@ -1,3 +1,4 @@
+import desk from './desk.js';
 import foolscap from './foolscap.js';
 import margins from './margins.js';
 import spiral from './spiral.js';
@@ -11,5 +12,5 @@ const testbed = {
   build: buildTestbed,
 };
 
-export const MAPS = [testbed, foolscap, margins, spiral, fold];
+export const MAPS = [desk, testbed, foolscap, margins, spiral, fold];
 export function mapById(id) { return MAPS.find((m) => m.id === id) || MAPS[0]; }

@@ -208,13 +208,21 @@ console.log('\n--- crumple ---');
   run(p, w, inp({ crouch: true }), 0.4);
   ok('height drops', p.height < T.height * 0.6, p.height.toFixed(2) + 'm');
 
-  // entering with speed gives a push
+  // entering preserves the speed you brought, but never adds to it
   const q = makePlayer(0, 0, 0);
   run(q, w, inp({ fwd: 1 }), 2.5);
   const before = q.speed;
   run(q, w, inp({ fwd: 1, crouch: true }), TICK * 2);
-  ok('entering with speed boosts', q.speed > before + 0.5,
+  ok('entering preserves momentum', q.speed > before * 0.97 && q.speed <= before + 0.01,
      before.toFixed(2) + ' -> ' + q.speed.toFixed(2));
+
+  // ...and rolling is slower than running, so it is not a travel option
+  const sprint = makePlayer(0, 0, 0);
+  run(sprint, w, inp({ fwd: 1 }), 3);
+  const roll = makePlayer(0, 0, 0);
+  run(roll, w, inp({ fwd: 1, crouch: true }), 4);
+  ok('sustained roll is slower than running', roll.speed < sprint.speed - 0.5,
+     'run ' + sprint.speed.toFixed(2) + ' vs roll ' + roll.speed.toFixed(2) + ' m/s');
 
   // it coasts rather than stopping dead -- but it is not frictionless
   const r2 = makePlayer(0, 0, 0);
@@ -222,16 +230,16 @@ console.log('\n--- crumple ---');
   run(r2, w, inp({ fwd: 1, crouch: true }), 0.5);
   const rollSpeed = r2.speed;
   run(r2, w, inp({ crouch: true }), 2.0);       // let go of the stick entirely
-  ok('still rolling 2s after input stops', r2.speed > 1.0,
+  ok('still rolling 2s after input stops', r2.speed > 0.7,
      rollSpeed.toFixed(2) + ' -> ' + r2.speed.toFixed(2) + ' m/s');
-  ok('but it does bleed speed -- not frictionless', r2.speed < rollSpeed * 0.45,
+  ok('but it does bleed speed -- not frictionless', r2.speed < rollSpeed * 0.40,
      'kept ' + (100 * r2.speed / rollSpeed).toFixed(0) + '%');
 
   // compare against standing, which stops dead
   const walk = makePlayer(0, 0, 0);
   run(walk, w, inp({ fwd: 1 }), 2.0);
   run(walk, w, inp(), 2.0);
-  ok('standing stops dead by comparison', walk.speed < 0.01 && r2.speed > 1.0,
+  ok('standing stops dead by comparison', walk.speed < 0.01 && r2.speed > 0.7,
      'walk ' + walk.speed.toFixed(3) + ' vs crumple ' + r2.speed.toFixed(2));
 
   ok('it visibly rolls', r2.roll > 1.0, 'roll=' + r2.roll.toFixed(1) + ' rad');

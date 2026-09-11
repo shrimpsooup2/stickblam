@@ -11,7 +11,7 @@ const RANGES = {
   edgeSpeedMult: [0.1, 1], edgeDepth: [0.01, 0.4],
   glideMinClearance: [0.5, 12], glideFallSpeed: [0.2, 8], glideAirAccel: [1, 30],
   glideMaxSpeed: [1, 16], glideRecoverTime: [0, 3],
-  crumpleFriction: [0, 6], crumpleAccel: [1, 40], crumpleMaxSpeed: [4, 20],
+  crumpleFriction: [0, 6], crumpleStopSpeed: [0, 4], crumpleAccel: [1, 40], crumpleMaxSpeed: [2, 16],
   crumpleEnterBoost: [0, 8], crumpleHeightMult: [0.2, 1], crumpleJumpMult: [0.2, 1.2],
   crumpleBounce: [0, 0.9],
   height: [1, 2.6], halfWidth: [0.15, 0.8],
@@ -25,7 +25,7 @@ const GROUPS = [
   ['Jump',    ['jumpVel', 'coyoteTime', 'jumpBuffer', 'stepHeight']],
   ['Edge-On', ['edgeEnterTime', 'edgeExitTime', 'edgeShootLock', 'edgeSpeedMult', 'edgeDepth']],
   ['Glide',   ['glideMinClearance', 'glideFallSpeed', 'glideAirAccel', 'glideMaxSpeed', 'glideRecoverTime']],
-  ['Crumple', ['crumpleFriction', 'crumpleAccel', 'crumpleMaxSpeed', 'crumpleEnterBoost', 'crumpleHeightMult', 'crumpleJumpMult', 'crumpleBounce']],
+  ['Crumple', ['crumpleFriction', 'crumpleStopSpeed', 'crumpleAccel', 'crumpleMaxSpeed', 'crumpleEnterBoost', 'crumpleHeightMult', 'crumpleJumpMult', 'crumpleBounce']],
   ['Weapon',  ['scopeTime', 'scopeFov', 'scopeSpeedMult', 'fireInterval', 'recoilKick', 'swayAmount', 'bobAmount']],
   ['Body',    ['height', 'halfWidth', 'fov', 'lookSensitivity']],
 ];

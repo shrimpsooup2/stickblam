@@ -158,7 +158,9 @@ export function stepPlayer(p, input, world, dt) {
     p.vel.y = approach(p.vel.y, -T.glideFallSpeed, 26, dt);
   } else if (p.grounded) {
     // ---------------- ground ----------------
-    applyFriction(p.vel, p.crumpled ? T.crumpleFriction : T.friction, T.stopSpeed, dt);
+    applyFriction(p.vel,
+                  p.crumpled ? T.crumpleFriction : T.friction,
+                  p.crumpled ? T.crumpleStopSpeed : T.stopSpeed, dt);
     const maxS = p.crumpled ? T.crumpleMaxSpeed
                : T.maxSpeed * (p.stance === STANCE.EDGE_ON ? T.edgeSpeedMult : 1)
                             * (input.scoped ? T.scopeSpeedMult : 1);

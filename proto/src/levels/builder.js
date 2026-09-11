@@ -205,6 +205,62 @@ export function createBuilder(name) {
       return api;
     },
 
+    /** A ring of wall segments -- a round room, which reads as a landmark. */
+    ring(cx, cz, radius, h, sides = 12, gaps = [], thick = 1.6, tone = TONE.wall) {
+      for (let i = 0; i < sides; i++) {
+        if (gaps.includes(i)) continue;
+        const a = (i + 0.5) / sides * Math.PI * 2;
+        const seg = (Math.PI * 2 * radius) / sides * 1.12;
+        api.box(cx + Math.sin(a) * radius, h / 2, cz + Math.cos(a) * radius,
+                Math.abs(Math.cos(a)) > 0.5 ? thick : seg, h,
+                Math.abs(Math.cos(a)) > 0.5 ? seg : thick, tone, STYLE.grid);
+      }
+      return api;
+    },
+
+    /**
+     * A sunken room. The surrounding ground is built as four slabs with a hole,
+     * because the solver cannot subtract -- so the pit is the absence of floor.
+     */
+    pit(cx, cz, sx, sz, depth, groundSx, groundSz, tone = TONE.floor) {
+      const hx = sx / 2, hz = sz / 2;
+      const gx = groundSx / 2, gz = groundSz / 2;
+      api.box(cx, -1, cz - (hz + gz) / 2, groundSx, 2, gz - hz, tone, STYLE.ruled, 'floor');
+      api.box(cx, -1, cz + (hz + gz) / 2, groundSx, 2, gz - hz, tone, STYLE.ruled, 'floor');
+      api.box(cx - (hx + gx) / 2, -1, cz, gx - hx, 2, sz, tone, STYLE.ruled, 'floor');
+      api.box(cx + (hx + gx) / 2, -1, cz, gx - hx, 2, sz, tone, STYLE.ruled, 'floor');
+      api.box(cx, -depth - 1, cz, sx, 2, sz, TONE.dark, STYLE.ruled, 'floor');   // pit floor
+      // the walls of the hole
+      api.box(cx, -depth / 2, cz - hz, sx, depth, 0.6, TONE.dark, STYLE.grid);
+      api.box(cx, -depth / 2, cz + hz, sx, depth, 0.6, TONE.dark, STYLE.grid);
+      api.box(cx - hx, -depth / 2, cz, 0.6, depth, sz, TONE.dark, STYLE.grid);
+      api.box(cx + hx, -depth / 2, cz, 0.6, depth, sz, TONE.dark, STYLE.grid);
+      return api;
+    },
+
+    /** A walkable ledge running along a wall, with the wall under it. */
+    ledge(cx, y, cz, sx, sz, tone = TONE.light) {
+      api.box(cx, y / 2, cz, sx, y, sz, TONE.block, STYLE.grid);
+      api.plat(cx, y, cz, sx + 0.5, sz + 0.5, tone);
+      api.box(cx, y + 0.2, cz, sx + 0.9, 0.3, sz + 0.9, TONE.dark, STYLE.plain);
+      return api;
+    },
+
+    /** A doorway-sized gap between two wall segments: a chokepoint you can name. */
+    gate(cx, cz, along, span, openW, h = 4.5, tone = TONE.wall) {
+      const seg = (span - openW) / 2, off = openW / 2 + seg / 2;
+      if (along === 'x') {
+        api.box(cx - off, h / 2, cz, seg, h, 1.2, tone, STYLE.grid);
+        api.box(cx + off, h / 2, cz, seg, h, 1.2, tone, STYLE.grid);
+        api.box(cx, (h + M.standFit) / 2 + 0.3, cz, openW, h - M.standFit - 0.3, 1.2, tone, STYLE.grid);
+      } else {
+        api.box(cx, h / 2, cz - off, 1.2, h, seg, tone, STYLE.grid);
+        api.box(cx, h / 2, cz + off, 1.2, h, seg, tone, STYLE.grid);
+        api.box(cx, (h + M.standFit) / 2 + 0.3, cz, 1.2, h - M.standFit - 0.3, openW, tone, STYLE.grid);
+      }
+      return api;
+    },
+
     /** The edge of the page: a darker rim, and nothing at all beyond it. */
     pageEdge(cx, cz, sx, sz) {
       const t = 2.2;

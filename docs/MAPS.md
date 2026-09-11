@@ -86,7 +86,49 @@ furnished.
 
 ---
 
-## 3. Shared flow vocabulary
+## 3. Why the first four maps were bad
+
+Worth writing down, because the diagnosis was not the one I expected. After the 3D
+coherence pass they still read poorly, and detail was not the problem. Measured
+against what competitive FPS layouts actually do:
+
+| Principle | The first four maps |
+| --- | --- |
+| **Distinct rooms with landmarks** | Everything looked identical. A 4×4 grid of similar buildings, or an open plane with evenly spaced cover. Nothing to navigate by or call out. |
+| **Three overlapping loops** | Margins is a *grid* — so many routes that none of them mean anything. Foolscap is three *parallel lanes*, which never reconnect, so there are no loops at all. |
+| **3–4 chokepoints, one per lane** | Essentially none. Nothing anywhere constricts. |
+| **Cover controlling specific sightlines** | Regularly spaced decoration. Placed by loop counter, not against any particular line. |
+
+**They were procedurally generated rather than designed.** Every one was built
+from a `for` loop, and a `for` loop cannot produce a memorable room.
+
+Reference metrics checked out, for what it is worth — eye height 1.62m against
+Source's 64 units (1.63m), jump 1.26m against 54 units (1.37m), streets 7m against
+the usual 3–6m corridors. Scale was never the issue.
+
+### The Desk
+
+Built to fix exactly those four things, by hand rather than by loop:
+
+- **Six rooms, each a different shape, size and height**, each with one landmark.
+  The desk theme does the work: a mug is round, a book stack is stepped, a lamp
+  overhangs, a drawer is sunken, clutter is chaotic. You always know where you are.
+- **Three overlapping loops** rather than parallel lanes.
+- **Three chokes on three different sides and heights** — the shelf gate, the
+  drawer mouth, the pot gap — so no single position covers more than one.
+- **Cover placed against named sightlines.** Each piece in the final block of the
+  file exists to break one specific line, and says which in a comment.
+
+The Lamp is the piece I like most: a wide shade at 8m makes the only spot on the
+map the centre high ground cannot see into, which gives the losing side somewhere
+to reset that is not a spawn.
+
+**The other four maps have not had this treatment.** The Desk is the pattern; they
+need rebuilding to it, or discarding.
+
+---
+
+## 4. Shared flow vocabulary
 
 - **Lane** — a route from one spawn toward the other. Every map has at least three
   so no single hold wins.
@@ -103,10 +145,11 @@ height and scoring are in permanent tension.
 
 ---
 
-## 4. The maps
+## 5. The maps
 
 | | Type | Size | Spawn → spawn | Tallest | Identity |
 | --- | --- | --- | --- | --- | --- |
+| **The Desk** | Three-lane arena | 80 × 58 | 70m / 9.2s | 8.7m | Hand-laid. Six rooms, three loops, three chokes. |
 | **Foolscap** | Open arena | 84 × 84 | 78m / 10.3s | 9.9m | The base shooter, almost no tricks |
 | **The Margins** | City / corridor | 96 × 96 | 124m / 16.4s | 16.0m | Three layers, dense grid |
 | **Spiral Binding** | Vertical tower | 72 × 72 | 72m / 9.5s | 34.9m | Height is power and scores nothing |
@@ -195,7 +238,7 @@ second choice and arguably more on-theme for a folded page.
 
 ---
 
-## 5. Open questions
+## 6. Open questions
 
 1. **Are these too big?** Sized for 8–12 players at 7.6 m/s. Margins at 16.4s
    spawn-to-spawn is the outlier — about 8s to first contact, which is on the slow
