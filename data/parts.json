@@ -1,0 +1,539 @@
+{
+  "_comment": "35 Scrawls across 5 slot types. draw is ink-per-shot and comes from the medium; bound_cost is the one-time ink to draw the part.",
+  "media": {
+    "HIGHLIGHTER": {
+      "draw": 0.3,
+      "character": "Non-lethal. Marks, reveals, tags."
+    },
+    "PENCIL": {
+      "draw": 0.5,
+      "character": "Faint, provisional. Refundable for 70%. Vulnerable to ERASE."
+    },
+    "CRAYON": {
+      "draw": 0.7,
+      "character": "Waxy, childish. Randomised magnitude. Immune to wash."
+    },
+    "PEN": {
+      "draw": 1.0,
+      "character": "Reliable, permanent. Immune to erasing. 2% blot misfire."
+    },
+    "WATERCOLOUR": {
+      "draw": 2.0,
+      "character": "Spreads and dilutes. Strips enemy PENCIL parts on hit."
+    },
+    "CHARCOAL": {
+      "draw": 2.5,
+      "character": "Filthy, high-impact. Residue clouds obscure your vision too."
+    },
+    "MARKER": {
+      "draw": 3.5,
+      "character": "Bold and wasteful. Bleeds its tags into adjacent slots."
+    },
+    "WHITEOUT": {
+      "draw": 6.0,
+      "character": "Anti-ink. Burst use only; you cannot sustain this."
+    },
+    "STAPLE": {
+      "draw": 0.0,
+      "character": "Physical. Costs no ink to run. Uses scarce map-found staples."
+    }
+  },
+  "parts": [
+    {
+      "id": "splitter_nib",
+      "name": "Splitter Nib",
+      "slot": "MUZZLE",
+      "medium": "PEN",
+      "tags": [
+        "SPLIT",
+        "PROJECTILE"
+      ],
+      "bound": 30,
+      "nib": 12,
+      "effect": "Shots fork into two. Damage \u00d70.65 each.",
+      "art": "a nib with a crack down the middle, drawn slightly wrong"
+    },
+    {
+      "id": "arrowhead",
+      "name": "Arrowhead",
+      "slot": "MUZZLE",
+      "medium": "PEN",
+      "tags": [
+        "HOMING",
+        "PROJECTILE"
+      ],
+      "bound": 34,
+      "nib": 10,
+      "effect": "Shots curve toward whatever you were last aiming at.",
+      "art": "a child's arrow, one barb longer than the other"
+    },
+    {
+      "id": "squiggle_tip",
+      "name": "Squiggle Tip",
+      "slot": "MUZZLE",
+      "medium": "CRAYON",
+      "tags": [
+        "RICOCHET",
+        "PROJECTILE"
+      ],
+      "bound": 22,
+      "nib": 14,
+      "effect": "Shots bounce twice. Damage \u00d70.9 per bounce.",
+      "art": "a waxy corkscrew scribbled over the barrel"
+    },
+    {
+      "id": "long_line",
+      "name": "The Long Line",
+      "slot": "MUZZLE",
+      "medium": "PEN",
+      "tags": [
+        "PIERCE"
+      ],
+      "bound": 32,
+      "nib": 10,
+      "effect": "Shots draw through up to 3 targets, \u00d70.8 falloff each.",
+      "art": "one unbroken stroke someone clearly held their breath for"
+    },
+    {
+      "id": "scribble_muzzle",
+      "name": "Scribble Muzzle",
+      "slot": "MUZZLE",
+      "medium": "CHARCOAL",
+      "tags": [
+        "SPRAY",
+        "CHAOS"
+      ],
+      "bound": 26,
+      "nib": 16,
+      "effect": "+60% fire rate, spread \u00d72.4, wobbles as it travels.",
+      "art": "a furious black mess where the barrel used to be"
+    },
+    {
+      "id": "blotter_cap",
+      "name": "Blotter Cap",
+      "slot": "MUZZLE",
+      "medium": "MARKER",
+      "tags": [
+        "AOE",
+        "PROJECTILE"
+      ],
+      "bound": 44,
+      "nib": 8,
+      "effect": "Shots leave a 2m ink pool for 6s.",
+      "art": "a fat felt cap, bleeding at the edges"
+    },
+    {
+      "id": "stipple_tip",
+      "name": "Stipple Tip",
+      "slot": "MUZZLE",
+      "medium": "PENCIL",
+      "tags": [
+        "SPRAY",
+        "PROJECTILE"
+      ],
+      "bound": 18,
+      "nib": 20,
+      "effect": "One shot becomes 5 dots. Damage \u00d70.28 each.",
+      "art": "dozens of tiny dots, applied with no patience whatsoever"
+    },
+    {
+      "id": "whiteout_nozzle",
+      "name": "Whiteout Nozzle",
+      "slot": "MUZZLE",
+      "medium": "WHITEOUT",
+      "tags": [
+        "ERASE",
+        "PROJECTILE"
+      ],
+      "bound": 58,
+      "nib": 5,
+      "effect": "34% chance on hit to strip one enemy part.",
+      "art": "a correction-fluid brush taped over the muzzle"
+    },
+    {
+      "id": "crosshatch",
+      "name": "Crosshatch Plating",
+      "slot": "BODY",
+      "medium": "CHARCOAL",
+      "tags": [
+        "ARMOR"
+      ],
+      "bound": 36,
+      "nib": 14,
+      "effect": "\u221222% damage taken. You render noticeably darker.",
+      "art": "dense diagonal hatching, going the wrong way in places"
+    },
+    {
+      "id": "second_barrel",
+      "name": "Second Barrel",
+      "slot": "BODY",
+      "medium": "PEN",
+      "tags": [
+        "SPLIT"
+      ],
+      "bound": 40,
+      "nib": 10,
+      "effect": "A worse copy of the gun on the side. +1 shot at \u00d70.5 damage.",
+      "art": "the same gun drawn again, smaller, at a slight angle"
+    },
+    {
+      "id": "eraser_shavings",
+      "name": "Eraser Shavings",
+      "slot": "BODY",
+      "medium": "WHITEOUT",
+      "tags": [
+        "ERASE",
+        "AOE"
+      ],
+      "bound": 62,
+      "nib": 5,
+      "effect": "Hits shed shavings: 18% strip chance in a 3m radius.",
+      "art": "rubber crumbs stuck to the frame with old tape"
+    },
+    {
+      "id": "wet_coat",
+      "name": "Wet Coat",
+      "slot": "BODY",
+      "medium": "WATERCOLOUR",
+      "tags": [
+        "AOE",
+        "DRAIN"
+      ],
+      "bound": 38,
+      "nib": 9,
+      "effect": "Enemies hit get blurred vision 1.5s and leak 2 pocket ink.",
+      "art": "a translucent wash that never fully dried"
+    },
+    {
+      "id": "staple_reinf",
+      "name": "Staple Reinforcement",
+      "slot": "BODY",
+      "medium": "STAPLE",
+      "tags": [
+        "ARMOR",
+        "PHYSICAL"
+      ],
+      "bound": 28,
+      "nib": 0,
+      "effect": "\u221215% damage taken, flat. Cannot be erased.",
+      "art": "eleven staples where three would have done"
+    },
+    {
+      "id": "margin_notes",
+      "name": "Margin Notes",
+      "slot": "BODY",
+      "medium": "HIGHLIGHTER",
+      "tags": [
+        "MARK"
+      ],
+      "bound": 20,
+      "nib": 24,
+      "effect": "Enemies you hit are marked for your team for 5s.",
+      "art": "annotations down the side of the gun, none of them legible"
+    },
+    {
+      "id": "smudge_thumb",
+      "name": "Smudge Thumb",
+      "slot": "BODY",
+      "medium": "CHARCOAL",
+      "tags": [
+        "AOE"
+      ],
+      "bound": 30,
+      "nib": 12,
+      "effect": "Melee becomes a 3m smear. 55 damage, knocks back.",
+      "art": "a greasy thumbprint pressed into the frame"
+    },
+    {
+      "id": "tally_marks",
+      "name": "Tally Marks",
+      "slot": "BODY",
+      "medium": "PENCIL",
+      "tags": [
+        "DRAIN"
+      ],
+      "bound": 16,
+      "nib": 22,
+      "effect": "Every hit siphons 0.4 pocket ink from the target to you.",
+      "art": "four strokes and a diagonal, over and over"
+    },
+    {
+      "id": "squint_lines",
+      "name": "Squint Lines",
+      "slot": "SIGHT",
+      "medium": "PENCIL",
+      "tags": [
+        "PRECISION"
+      ],
+      "bound": 18,
+      "nib": 26,
+      "effect": "1.8\u00d7 zoom, spread \u00d70.55 while aiming.",
+      "art": "two little speed-lines by the eye, added as an afterthought"
+    },
+    {
+      "id": "xray_sketch",
+      "name": "X-Ray Sketch",
+      "slot": "SIGHT",
+      "medium": "PENCIL",
+      "tags": [
+        "PRECISION",
+        "MARK"
+      ],
+      "bound": 34,
+      "nib": 18,
+      "effect": "See enemies through erased and thin geometry.",
+      "art": "a cutaway diagram someone traced off a book"
+    },
+    {
+      "id": "guide_lines",
+      "name": "Guide Lines",
+      "slot": "SIGHT",
+      "medium": "PEN",
+      "tags": [
+        "PRECISION",
+        "HOMING"
+      ],
+      "bound": 26,
+      "nib": 16,
+      "effect": "Dotted line predicting target movement 0.6s ahead. Shots follow it.",
+      "art": "construction lines that were never rubbed out"
+    },
+    {
+      "id": "crosshair_doodle",
+      "name": "Crosshair Doodle",
+      "slot": "SIGHT",
+      "medium": "CRAYON",
+      "tags": [
+        "CHAOS"
+      ],
+      "bound": 14,
+      "nib": 24,
+      "effect": "Crosshair drifts. 12% of shots crit for \u00d72.2.",
+      "art": "a wonky X, redrawn three times, all three still visible"
+    },
+    {
+      "id": "highlighter_bead",
+      "name": "Highlighter Bead",
+      "slot": "SIGHT",
+      "medium": "HIGHLIGHTER",
+      "tags": [
+        "MARK"
+      ],
+      "bound": 16,
+      "nib": 30,
+      "effect": "Anyone you look at for 0.5s is marked for your team.",
+      "art": "a blob of fluorescent nothing, in greyscale"
+    },
+    {
+      "id": "bent_ruler",
+      "name": "Bent Ruler",
+      "slot": "SIGHT",
+      "medium": "PEN",
+      "tags": [
+        "PRECISION",
+        "PIERCE"
+      ],
+      "bound": 42,
+      "nib": 12,
+      "effect": "Perfectly straight shot, no falloff, +0.4s recovery.",
+      "art": "a ruler with a visible kink, taped along the barrel"
+    },
+    {
+      "id": "sticky_tape",
+      "name": "Sticky Tape",
+      "slot": "GRIP",
+      "medium": "STAPLE",
+      "tags": [
+        "PHYSICAL"
+      ],
+      "bound": 12,
+      "nib": 0,
+      "effect": "\u221240% recoil. Cannot be erased.",
+      "art": "three strips, one peeling, fingerprints in the adhesive"
+    },
+    {
+      "id": "shaky_hand",
+      "name": "Shaky Hand",
+      "slot": "GRIP",
+      "medium": "CRAYON",
+      "tags": [
+        "CHAOS",
+        "SPRAY"
+      ],
+      "bound": 15,
+      "nib": 20,
+      "effect": "+45% fire rate, spread \u00d71.9. Cheap and stupid.",
+      "art": "the outline drawn four times, none of them matching"
+    },
+    {
+      "id": "rubber_band",
+      "name": "Rubber Band",
+      "slot": "GRIP",
+      "medium": "STAPLE",
+      "tags": [
+        "PHYSICAL",
+        "ARMOR"
+      ],
+      "bound": 22,
+      "nib": 0,
+      "effect": "\u221230% nib re-wet delay. \u22128% damage taken.",
+      "art": "a perished band, wrapped twice, going grey"
+    },
+    {
+      "id": "knuckle_grip",
+      "name": "Knuckle Grip",
+      "slot": "GRIP",
+      "medium": "CHARCOAL",
+      "tags": [
+        "ARMOR"
+      ],
+      "bound": 28,
+      "nib": 14,
+      "effect": "\u221270% flinch when hit. \u221210% damage taken.",
+      "art": "a fist that is mostly just a lumpy blob"
+    },
+    {
+      "id": "flicked_wrist",
+      "name": "Flicked Wrist",
+      "slot": "GRIP",
+      "medium": "PEN",
+      "tags": [
+        "RICOCHET"
+      ],
+      "bound": 30,
+      "nib": 12,
+      "effect": "Shots curve on release and bounce once off geometry.",
+      "art": "a motion arc, drawn with more confidence than skill"
+    },
+    {
+      "id": "chewed_end",
+      "name": "Chewed End",
+      "slot": "GRIP",
+      "medium": "CRAYON",
+      "tags": [
+        "CHAOS"
+      ],
+      "bound": 10,
+      "nib": 26,
+      "effect": "All effect magnitudes randomised \u00d70.6\u20131.5 per shot.",
+      "art": "unmistakably been in someone's mouth"
+    },
+    {
+      "id": "pressure_grip",
+      "name": "Pressure Grip",
+      "slot": "GRIP",
+      "medium": "MARKER",
+      "tags": [
+        "AOE"
+      ],
+      "bound": 46,
+      "nib": 7,
+      "effect": "Hold to charge: up to \u00d72.4 damage and a 3m mark.",
+      "art": "the paper has visibly dented where it was pressed"
+    },
+    {
+      "id": "ink_sac",
+      "name": "Ink Sac",
+      "slot": "RESERVOIR",
+      "medium": "PEN",
+      "tags": [],
+      "bound": 20,
+      "nib": 0,
+      "effect": "+60% nib capacity on every part.",
+      "art": "a bulging sac, one seam clearly about to go"
+    },
+    {
+      "id": "bottomless_well",
+      "name": "Bottomless Well",
+      "slot": "RESERVOIR",
+      "medium": "MARKER",
+      "tags": [
+        "DRAIN"
+      ],
+      "bound": 54,
+      "nib": 0,
+      "effect": "Nibs never empty \u2014 every shot draws straight from your pocket.",
+      "art": "a hole drawn on the side of the gun, in the cartoon sense"
+    },
+    {
+      "id": "leaky_barrel",
+      "name": "Leaky Barrel",
+      "slot": "RESERVOIR",
+      "medium": "WATERCOLOUR",
+      "tags": [
+        "AOE",
+        "DRAIN"
+      ],
+      "bound": 32,
+      "nib": 10,
+      "effect": "Leaves an ink trail behind you. Costs 0.3 pocket ink/s.",
+      "art": "a stain spreading down from a crack, still wet"
+    },
+    {
+      "id": "spare_cartridge",
+      "name": "Spare Cartridge",
+      "slot": "RESERVOIR",
+      "medium": "STAPLE",
+      "tags": [
+        "PHYSICAL"
+      ],
+      "bound": 18,
+      "nib": 0,
+      "effect": "+40 staples. Works at zero ink.",
+      "art": "a cardboard box of staples, gaffer-taped on"
+    },
+    {
+      "id": "capillary_feed",
+      "name": "Capillary Feed",
+      "slot": "RESERVOIR",
+      "medium": "PENCIL",
+      "tags": [],
+      "bound": 14,
+      "nib": 0,
+      "effect": "Nibs re-wet 55% faster.",
+      "art": "hair-thin lines running back along the body"
+    },
+    {
+      "id": "pressurised_can",
+      "name": "Pressurised Can",
+      "slot": "RESERVOIR",
+      "medium": "MARKER",
+      "tags": [
+        "SPRAY",
+        "AOE",
+        "CHAOS"
+      ],
+      "bound": 48,
+      "nib": 6,
+      "effect": "Fires in 4-round bursts. +30% damage, draw \u00d71.4.",
+      "art": "a dented aerosol, warning label scribbled out"
+    },
+    {
+      "id": "paperclip_chain",
+      "name": "Paperclip Chain",
+      "slot": "BODY",
+      "medium": "STAPLE",
+      "tags": [
+        "PHYSICAL",
+        "MARK"
+      ],
+      "bound": 24,
+      "nib": 0,
+      "effect": "Hits leave a clipped-on tag. Target marked for your team for 4s.",
+      "art": "a chain of paperclips, three of them bent open"
+    },
+    {
+      "id": "staple_hopper",
+      "name": "Staple Hopper",
+      "slot": "RESERVOIR",
+      "medium": "STAPLE",
+      "tags": [
+        "PHYSICAL"
+      ],
+      "bound": 22,
+      "nib": 0,
+      "effect": "+90 staples and a faster feed. Works at zero ink.",
+      "art": "a takeaway container cable-tied to the frame"
+    }
+  ]
+}

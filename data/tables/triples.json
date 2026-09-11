@@ -1,0 +1,15 @@
+{
+  "_comment": "A Masterpiece suppresses the three pairwise results among its members. There is no 'Masterpiece card' — these only emerge from holding three specific Instructions at once.",
+  "masterpieces": [
+    { "tags":["ERASE","HOMING","SPLIT"],       "name":"The Critic",       "effect":"Seeking forks, each strips one part from whoever it hits. The anti-snowball nuke." },
+    { "tags":["MARK","PIERCE","PRECISION"],    "name":"Final Draft",      "effect":"One shot per magazine. Hitscan, infinite range, marks on kill, enormous damage." },
+    { "tags":["AOE","DRAIN","SPRAY"],          "name":"Flood",            "effect":"Paint an area that drains ink from every enemy in it into your pocket." },
+    { "tags":["CHAOS","RICOCHET","SPLIT"],     "name":"Scribble Storm",   "effect":"The room fills with bouncing forking nonsense for 3 seconds." },
+    { "tags":["ARMOR","MARK","PHYSICAL"],      "name":"Sandwich Board",   "effect":"Heavy armour; everyone who shoots you is marked for your team." },
+    { "tags":["AOE","ERASE","RICOCHET"],       "name":"Eraser Shavings",  "effect":"Bouncing erase blobs that chew holes in the level. Map vandalism as a playstyle." },
+    { "tags":["DRAIN","HOMING","MARK"],        "name":"Debt Collector",   "effect":"Marked enemies leak ink to you continuously; your shots find them anywhere." },
+    { "tags":["CHAOS","CHAOS","CHAOS"],        "name":"Masterpiece",      "effect":"Nobody knows. Rerolls its behaviour every 5 seconds. Named sarcastically. Reachable entirely through bad photocopies." },
+    { "tags":["ARMOR","CHAOS","SPRAY"],        "name":"Human Shield",     "effect":"You gain armour proportional to how badly you are currently missing." },
+    { "tags":["AOE","ARMOR","PIERCE"],         "name":"Bulldozer",        "effect":"Walk forward through everything. Shots punch a hole and the blast widens it." }
+  ]
+}

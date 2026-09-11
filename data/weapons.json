@@ -1,0 +1,199 @@
+{
+  "_comment": "Every weapon has exactly 3 slots. Weapon identity = which 3 slot types + banned tags + banned media + base stats. Ban lists stay short by rule; the Stapler is the one whitelist, because it is the one weapon outside the ink economy.",
+  "weapons": [
+    {
+      "id": "biro",
+      "name": "Biro",
+      "role": "Semi-auto pistol. Starting weapon, all-rounder.",
+      "slots": [
+        "MUZZLE",
+        "BODY",
+        "SIGHT"
+      ],
+      "banned_tags": [],
+      "base": {
+        "damage": 26,
+        "rpm": 260,
+        "range_m": 45,
+        "projectile": "hitscan"
+      },
+      "note": "Takes everything. Deliberately the most combinable weapon in the game.",
+      "banned_media": []
+    },
+    {
+      "id": "fineliner",
+      "name": "Fineliner",
+      "role": "Precision rifle. Draws one long exact line.",
+      "slots": [
+        "MUZZLE",
+        "SIGHT",
+        "GRIP"
+      ],
+      "banned_tags": [
+        "SPRAY",
+        "CHAOS"
+      ],
+      "base": {
+        "damage": 78,
+        "rpm": 48,
+        "range_m": 200,
+        "projectile": "hitscan"
+      },
+      "note": "A shaky hand ruins a fine line. Bans SPRAY and CHAOS outright.",
+      "banned_media": [
+        "CRAYON",
+        "CHARCOAL"
+      ]
+    },
+    {
+      "id": "brush",
+      "name": "Brush",
+      "role": "SMG. Fast, sloppy, wide.",
+      "slots": [
+        "MUZZLE",
+        "GRIP",
+        "RESERVOIR"
+      ],
+      "banned_tags": [
+        "PRECISION"
+      ],
+      "base": {
+        "damage": 11,
+        "rpm": 700,
+        "range_m": 22,
+        "projectile": "hitscan"
+      },
+      "note": "Cannot mount a scope. No slot for one, and it bans PRECISION anyway.",
+      "banned_media": [
+        "WHITEOUT"
+      ]
+    },
+    {
+      "id": "marker",
+      "name": "Marker",
+      "role": "Shotgun. Bold, short, wide strokes.",
+      "slots": [
+        "MUZZLE",
+        "BODY",
+        "GRIP"
+      ],
+      "banned_tags": [
+        "PRECISION"
+      ],
+      "base": {
+        "damage": 13,
+        "pellets": 7,
+        "rpm": 75,
+        "range_m": 14,
+        "projectile": "hitscan"
+      },
+      "slot_bleed": true,
+      "note": "Marker-medium parts bleed their tags into adjacent slots. Your parts interact whether you wanted them to or not.",
+      "banned_media": [
+        "PENCIL",
+        "HIGHLIGHTER"
+      ]
+    },
+    {
+      "id": "spraycan",
+      "name": "Spraycan",
+      "role": "Launcher. Arcing blobs, area denial.",
+      "slots": [
+        "MUZZLE",
+        "BODY",
+        "RESERVOIR"
+      ],
+      "banned_tags": [
+        "PRECISION",
+        "PIERCE"
+      ],
+      "base": {
+        "damage": 45,
+        "splash": 34,
+        "rpm": 55,
+        "range_m": 30,
+        "projectile": "arc"
+      },
+      "note": "Nothing about this is precise and nothing about it penetrates.",
+      "banned_media": [
+        "PENCIL",
+        "PEN"
+      ]
+    },
+    {
+      "id": "eraser",
+      "name": "Eraser",
+      "role": "Short cone. Low lethality; strips enemy parts.",
+      "slots": [
+        "BODY",
+        "GRIP",
+        "RESERVOIR"
+      ],
+      "banned_tags": [
+        "PROJECTILE",
+        "PIERCE",
+        "SPLIT"
+      ],
+      "base": {
+        "damage": 8,
+        "rpm": 180,
+        "range_m": 7,
+        "projectile": "cone",
+        "strip_chance": 0.34
+      },
+      "note": "Has no MUZZLE slot because it does not shoot. It un-draws. The comeback tool.",
+      "banned_media": [
+        "CHARCOAL",
+        "MARKER"
+      ]
+    },
+    {
+      "id": "stapler",
+      "name": "Stapler",
+      "role": "Nailgun. Scarce map-found staples, not ink.",
+      "slots": [
+        "BODY",
+        "GRIP",
+        "RESERVOIR"
+      ],
+      "banned_tags": [],
+      "base": {
+        "damage": 22,
+        "rpm": 200,
+        "range_m": 28,
+        "projectile": "ballistic"
+      },
+      "note": "Only STAPLE-medium parts. Sits entirely outside the ink economy \u2014 every part on it has draw 0.",
+      "only_media": [
+        "STAPLE"
+      ]
+    },
+    {
+      "id": "highlighter",
+      "name": "Highlighter",
+      "role": "Support beam. Marks enemies, boosts allied ink gain.",
+      "slots": [
+        "MUZZLE",
+        "SIGHT",
+        "RESERVOIR"
+      ],
+      "banned_tags": [
+        "PIERCE",
+        "ARMOR"
+      ],
+      "base": {
+        "damage": 6,
+        "rpm": 600,
+        "range_m": 26,
+        "projectile": "beam",
+        "cannot_kill": true
+      },
+      "note": "Cannot land a killing blow \u2014 only brings an enemy to 1 HP.",
+      "banned_media": [
+        "CHARCOAL",
+        "MARKER",
+        "WHITEOUT"
+      ]
+    }
+  ]
+}

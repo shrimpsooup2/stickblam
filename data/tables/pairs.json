@@ -1,0 +1,251 @@
+{
+  "_comment": "Rules are keyed on sorted TAG pairs, never part IDs. PROJECTILE is a STRUCTURAL tag -- it exists so weapons can ban it -- and deliberately carries no interaction rules, because it sits on almost every muzzle part.",
+  "thirst_by_tier": {
+    "0": null,
+    "1": 1.1,
+    "2": 1.0,
+    "3": 1.25,
+    "4": 1.5
+  },
+  "combos": [
+    {
+      "tags": [
+        "HOMING",
+        "SPLIT"
+      ],
+      "name": "Flock",
+      "effect": "Each fork independently seeks. Terrifying, low per-hit damage."
+    },
+    {
+      "tags": [
+        "SPLIT",
+        "SPLIT"
+      ],
+      "name": "Fractal",
+      "effect": "Forks fork. Exponential count, tiny damage each. A cloud of dots."
+    },
+    {
+      "tags": [
+        "PIERCE",
+        "SPLIT"
+      ],
+      "name": "Rake",
+      "effect": "A parallel comb of lines that all penetrate."
+    },
+    {
+      "tags": [
+        "PIERCE",
+        "RICOCHET"
+      ],
+      "name": "Cat's Cradle",
+      "effect": "The line bounces and continues, stitching a whole room together."
+    },
+    {
+      "tags": [
+        "ERASE",
+        "PIERCE"
+      ],
+      "name": "Redaction",
+      "effect": "Erases a tunnel clean through level geometry. Permanently changes the map."
+    },
+    {
+      "tags": [
+        "AOE",
+        "SPRAY"
+      ],
+      "name": "Wash",
+      "effect": "Wide short-range zone paint. Denies a corridor outright."
+    },
+    {
+      "tags": [
+        "CHAOS",
+        "SPRAY"
+      ],
+      "name": "Scribble",
+      "effect": "Wild inaccuracy, doubled fire rate. Deeply stupid, occasionally correct."
+    },
+    {
+      "tags": [
+        "AOE",
+        "DRAIN"
+      ],
+      "name": "Siphon Pool",
+      "effect": "Your ink pools drain pocket ink from enemies standing in them."
+    },
+    {
+      "tags": [
+        "ARMOR",
+        "CHAOS"
+      ],
+      "name": "Crumple Guard",
+      "effect": "Damage taken randomised \u00d70.3\u20131.7. Gambling with your life."
+    },
+    {
+      "tags": [
+        "HOMING",
+        "MARK"
+      ],
+      "name": "Guided Hand",
+      "effect": "Your shots seek anything you've marked, through anything."
+    },
+    {
+      "tags": [
+        "DRAIN",
+        "MARK"
+      ],
+      "name": "Bounty",
+      "effect": "Marked enemies drop +50% Blots on death. The support player's jackpot."
+    },
+    {
+      "tags": [
+        "AOE",
+        "ERASE"
+      ],
+      "name": "Rub Out",
+      "effect": "A wide erase cone. Strips parts off everyone in front of you."
+    },
+    {
+      "tags": [
+        "ERASE",
+        "PRECISION"
+      ],
+      "name": "Surgical Erasure",
+      "effect": "Strips one specific chosen part instead of a random one."
+    },
+    {
+      "tags": [
+        "PIERCE",
+        "PRECISION"
+      ],
+      "name": "Ruled Line",
+      "effect": "Perfectly straight infinite-range hitscan. Heavy damage, long recovery."
+    },
+    {
+      "tags": [
+        "AOE",
+        "RICOCHET"
+      ],
+      "name": "Splatterball",
+      "effect": "Bouncing blob that splashes on every bounce."
+    },
+    {
+      "tags": [
+        "HOMING",
+        "PHYSICAL"
+      ],
+      "name": "Bent Staple",
+      "effect": "Staples curve. Ink-free tracking for the broke player."
+    },
+    {
+      "tags": [
+        "ARMOR",
+        "PHYSICAL"
+      ],
+      "name": "Stapled Plating",
+      "effect": "Flat damage reduction, and it cannot be erased."
+    },
+    {
+      "tags": [
+        "CHAOS",
+        "CHAOS"
+      ],
+      "name": "Total Nonsense",
+      "effect": "Every shot picks a random other combo's behaviour for that shot."
+    },
+    {
+      "tags": [
+        "SPLIT",
+        "SPRAY"
+      ],
+      "name": "Buckshot",
+      "effect": "The spread divides again on the way out. Twice the dots, half the weight."
+    },
+    {
+      "tags": [
+        "DRAIN",
+        "PIERCE"
+      ],
+      "name": "Leech Line",
+      "effect": "The line siphons a trickle of pocket ink from everyone it passes through."
+    },
+    {
+      "tags": [
+        "MARK",
+        "PRECISION"
+      ],
+      "name": "Registration Marks",
+      "effect": "Marked targets show a lead indicator and take +15% from you."
+    },
+    {
+      "tags": [
+        "ARMOR",
+        "AOE"
+      ],
+      "name": "Blast Shield",
+      "effect": "Your own area effects no longer hurt you, and push enemies back."
+    }
+  ],
+  "bleeds": [
+    {
+      "tags": [
+        "HOMING",
+        "RICOCHET"
+      ],
+      "name": "Indecision",
+      "effect": "Both want to steer. Shots wander, curve back, occasionally hit you.",
+      "penalty": 0.25
+    },
+    {
+      "tags": [
+        "PRECISION",
+        "SPRAY"
+      ],
+      "name": "Shaky Hand",
+      "effect": "A scope drawn on a gun that can't hold still. Zoomed and inaccurate.",
+      "penalty": 0.3
+    },
+    {
+      "tags": [
+        "AOE",
+        "PIERCE"
+      ],
+      "name": "Thin Blast",
+      "effect": "The blast wants to spread, the pierce wants a line. Both get weaker.",
+      "penalty": 0.25
+    },
+    {
+      "tags": [
+        "ARMOR",
+        "ERASE"
+      ],
+      "name": "Self-Erasing",
+      "effect": "Your eraser eats your own plating. Armour decays while you shoot.",
+      "penalty": 0.28
+    },
+    {
+      "tags": [
+        "CHAOS",
+        "PRECISION"
+      ],
+      "name": "Wobble",
+      "effect": "Precision and chaos cancel. You get neither, and the sight drifts.",
+      "penalty": 0.3
+    },
+    {
+      "tags": [
+        "MARK",
+        "PHYSICAL"
+      ],
+      "name": "Blunt Instrument",
+      "effect": "Staples won't hold a highlighter mark. It rubs off in seconds.",
+      "penalty": 0.2
+    }
+  ],
+  "thirst_floor_by_tier": {
+    "_comment": "Multiplier alone is not enough: a Masterpiece assembled from cheap media (Pencil + Highlighter + Pen) came out at 2.7/shot, which is sustainable all match and defeats 'burst power, not sustained power'. The floor sets the minimum cost of running an interaction at all, regardless of what it's drawn with.",
+    "1": 0.0,
+    "2": 0.0,
+    "3": 3.0,
+    "4": 6.0
+  }
+}
