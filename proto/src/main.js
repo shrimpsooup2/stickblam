@@ -41,7 +41,7 @@ function respawn() {
   player.pos.y = level.world.spawn.y + 0.5;
   player.pos.z = level.world.spawn.z;
   player.vel.x = player.vel.y = player.vel.z = 0;
-  player.ball = false;
+  player.crumpled = false;
   player.gliding = false;
   player.recover = 0;
   player.thin = 0;
@@ -159,7 +159,7 @@ function frame(now) {
     sprites.push(d.x, d.y, d.z, T.height, r.x, r.y, r.w, r.h, 1, 0.62, 0, 0);
   }
   if (thirdPerson) {
-    const pick = poseFor({ stance: player.stance, ball: player.ball, thin: player.thin,
+    const pick = poseFor({ stance: player.stance, ball: player.crumpled, thin: player.thin,
                            grounded: player.grounded, vy: player.vel.y, speed: player.speed },
                          post.time, 0);
     const r = renderer.atlas.rects[pick.pose][pick.variant];
@@ -169,7 +169,7 @@ function frame(now) {
     sprites.push(rp.x, rp.y, rp.z, rp.h,
                  r.x, r.y, r.w, r.h,
                  player.facing * flip * thinScale, 0.9, 0,
-                 player.ball ? -player.roll * player.facing : 0);
+                 player.crumpled ? -player.roll * player.facing : 0);
   }
 
   // ---------- draw ----------

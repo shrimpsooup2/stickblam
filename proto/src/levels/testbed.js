@@ -83,9 +83,9 @@ export function buildTestbed() {
   }
 
   // ----------------------------------------------- WEST: roll stations ------
-  label(-16, 3.6, -6, 'ROLL TUNNEL', 'station');
+  label(-16, 3.6, -6, 'CRUMPLE TUNNEL', 'station');
   // a run-up, then a ceiling only a roll fits under
-  const ceilY = T.height * T.ballHeightMult + 0.42;
+  const ceilY = T.height * T.crumpleHeightMult + 0.42;
   solid(-20, ceilY + 1.6, 0, 16, 3.2, 7, 0.60, 0, 'tunnel roof');
   solid(-20, 1.0, 4.0, 16, 2.0, 0.5, 0.60, 2);
   solid(-20, 1.0, -4.0, 16, 2.0, 0.5, 0.60, 2);
@@ -93,14 +93,14 @@ export function buildTestbed() {
   label(-11, 2.6, 0, 'hold crouch to fit', 'note');
 
   // A rolling course: long straight walls with a kink, to feel momentum carry.
-  label(-26, 3.8, -28, 'ROLL COURSE', 'station');
+  label(-26, 3.8, -28, 'CRUMPLE COURSE', 'station');
   for (let i = 0; i < 8; i++) {
     solid(-34 + i * 0.4, 1.2, -30 - i * 3.2, 0.5, 2.4, 3.2, 0.60, 2);
     solid(-20 - i * 0.4, 1.2, -30 - i * 3.2, 0.5, 2.4, 3.2, 0.60, 2);
   }
   solid(-27, 1.2, -28, 15, 2.4, 0.5, 0.62, 2);
   label(-27, 1.5, -32, 'hold crouch, then let go of the stick', 'note');
-  label(-27, 1.2, -52, 'a ball does not stop', 'note');
+  label(-27, 1.2, -52, 'crumple coasts, standing stops', 'note');
 
   // ------------------------------------------------------ sparring dummies --
   dummies.push({ x: 4, y: 0, z: -6, pose: 'idle', seed: 2 });

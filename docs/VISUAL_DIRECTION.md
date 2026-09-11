@@ -118,6 +118,40 @@ physicality as a paper object — not a sprite-shaped hole in the rendering.
   peels itself up over about a second. Draw the recovery, don't skip it: it is the
   price of the only stable shooting platform in the game.
 
+### Proportions
+
+**Reference: [`reference/stickman-proportions.png`](reference/stickman-proportions.png).**
+The construction is specific and the numbers matter more than they look like they
+should:
+
+| | |
+| --- | --- |
+| **Head** | ~27% of total height, and **wider than tall** (about 1.2 : 1). It is the single biggest shape in the figure, so the head's outline *is* the silhouette. |
+| **Neck** | None. |
+| **Shoulders** | None. Arms, spine and head all meet at **one node** directly under the skull. |
+| **Limbs** | Single long strokes with a gentle bow. A slight kink partway, never a hard elbow or knee. |
+| **Line weight** | Thin, against that big head. The contrast between a heavy skull and spindly limbs is most of the character. |
+
+Heads are lumpy, not round. Build them from a few slow harmonics rather than
+per-point noise — noise on a circle still reads as a circle, where three low
+frequencies give you an actual potato. Leave the loop slightly open.
+
+**Arms cannot be raised much past horizontal.** They start under the skull, and
+their bow is perpendicular to the stroke, so a raised arm arcs straight through
+the head. Pose the arms out rather than up.
+
+### Warping
+
+One construction, stretched and squashed per pose, rather than a different figure
+drawn for each. Gliding is the same stickman pulled flat and wide; the crumple is
+the same stickman crushed down. The reference sheet shows this directly — the
+right-hand figure is the left-hand figure stretched along its own axis.
+
+Apply the warp **once**, at placement. Baking it into the limb lengths as well
+squares it, which silently stretched the jump 25% too tall and crushed the glide
+to a third of its size. Fit and centre the finished skeleton in its cell
+afterwards, so a pose can warp as far as it likes without sliding off the edge.
+
 ### Animation: choppy on purpose
 
 Target is genuinely cheap flipbook animation, not smooth animation at a lower

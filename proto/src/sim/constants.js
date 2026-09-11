@@ -38,14 +38,14 @@ export const T = {
   glideMaxSpeed:       5.20,
   glideRecoverTime:    0.95,  // you land flat and have to get up
 
-  // --- Ball: hold crouch and roll ---
-  ballFriction:        0.34,  // barely any -- a ball does not come to a stop
-  ballAccel:           9.0,   // and you can barely steer it
-  ballMaxSpeed:       13.0,
-  ballEnterBoost:      1.9,
-  ballHeightMult:      0.42,
-  ballJumpMult:        0.72,
-  ballBounce:          0.32,  // keeps a little vertical energy on landing
+  // --- Crumple: hold crouch and roll ---
+  crumpleFriction:     0.85,  // low, not frictionless: it should coast, not glide forever
+  crumpleAccel:        9.0,   // and you can barely steer it
+  crumpleMaxSpeed:     9.6,   // a modest edge over the 7.6 walk, not a rocket
+  crumpleEnterBoost:   1.2,
+  crumpleHeightMult:      0.42,
+  crumpleJumpMult:        0.72,
+  crumpleBounce:          0.32,  // keeps a little vertical energy on landing
 
   // --- body ---
   height:              1.78,
@@ -67,8 +67,8 @@ export const T = {
   bobAmount:           0.024,
 };
 
-export const STANCE = { NORMAL: 0, EDGE_ON: 1, BALL: 2, GLIDE: 3, RECOVER: 4 };
-export const STANCE_NAME = ['Normal', 'Edge-On', 'Ball', 'Gliding', 'Getting up'];
+export const STANCE = { NORMAL: 0, EDGE_ON: 1, CRUMPLE: 2, GLIDE: 3, RECOVER: 4 };
+export const STANCE_NAME = ['Normal', 'Edge-On', 'Crumple', 'Gliding', 'Getting up'];
 
 export const TICK = 1 / 120;   // fixed sim step. Deterministic on purpose:
                                // this is what server-authoritative netcode needs.

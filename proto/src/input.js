@@ -5,7 +5,7 @@ export const BINDINGS = [
   ['W A S D', 'move'],
   ['Space', 'jump'],
   ['F  /  Space in air', 'deploy Paper Glide — needs height, cannot be cancelled'],
-  ['Shift (hold)', 'Ball — rolls, keeps momentum, can still shoot'],
+  ['Shift (hold)', 'Crumple — roll, keep momentum, can still shoot'],
   ['Q', 'Edge-On — 90°, slow return, no firing for 1s after'],
   ['Right mouse', 'scope'],
   ['Left mouse', 'fire'],

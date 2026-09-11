@@ -40,7 +40,7 @@ export function makePlayer(x = 0, y = 0, z = 0) {
     recover: 0,         // seconds left lying flat after a glide landing
     clearance: 0,       // metres of air below the feet
 
-    ball: false,
+    crumpled: false,
     roll: 0,            // accumulated roll angle, for the sprite
 
     coyote: 0,
@@ -91,22 +91,23 @@ export function stepPlayer(p, input, world, dt) {
     return r0;
   }
 
-  // ---------------- ball ----------------
-  // Hold crouch and you are a ball. No speed gate: it is a stance, not a trick.
-  const wantBall = input.crouch && !p.gliding;
-  if (wantBall && !p.ball) {
-    p.ball = true;
+  // ---------------- crumple ----------------
+  // Hold crouch and you crumple into a ball. No speed gate: it is a stance,
+  // not a trick you have to earn with speed.
+  const wantCrumple = input.crouch && !p.gliding;
+  if (wantCrumple && !p.crumpled) {
+    p.crumpled = true;
     const s = Math.hypot(p.vel.x, p.vel.z);
-    if (s > 0.5) { const k = (s + T.ballEnterBoost) / s; p.vel.x *= k; p.vel.z *= k; }
-  } else if (!wantBall && p.ball) {
+    if (s > 0.5) { const k = (s + T.crumpleEnterBoost) / s; p.vel.x *= k; p.vel.z *= k; }
+  } else if (!wantCrumple && p.crumpled) {
     // only stand up if there is headroom
-    if (!anyOverlap(p.pos, T.halfWidth, T.height, solids)) p.ball = false;
+    if (!anyOverlap(p.pos, T.halfWidth, T.height, solids)) p.crumpled = false;
   }
 
   // ---------------- edge-on ----------------
   // Held: snap to 90 degrees. Released: come back slowly, and no shooting for a
   // second. Tapping it is not free.
-  const wantEdge = input.edge && !p.ball && !p.gliding;
+  const wantEdge = input.edge && !p.crumpled && !p.gliding;
   if (p.edgeHeld && !wantEdge) p.shootLock = Math.max(p.shootLock, T.edgeShootLock);
   p.edgeHeld = wantEdge;
   const rate = wantEdge ? 1 / T.edgeEnterTime : 1 / T.edgeExitTime;
@@ -115,7 +116,7 @@ export function stepPlayer(p, input, world, dt) {
   // ---------------- glide deploy ----------------
   const glidePressed = input.glide && !p.lastGlideHeld;
   p.lastGlideHeld = input.glide;
-  if (glidePressed && !p.grounded && !p.gliding && !p.ball &&
+  if (glidePressed && !p.grounded && !p.gliding && !p.crumpled &&
       p.clearance >= T.glideMinClearance) {
     p.gliding = true;
     p.vel.y = Math.max(p.vel.y, -T.glideFallSpeed);
@@ -124,10 +125,10 @@ export function stepPlayer(p, input, world, dt) {
 
   // ---------------- stance readout ----------------
   p.stance = p.gliding ? STANCE.GLIDE
-           : p.ball ? STANCE.BALL
+           : p.crumpled ? STANCE.CRUMPLE
            : (p.thin > 0.02 ? STANCE.EDGE_ON : STANCE.NORMAL);
 
-  const targetHeight = p.ball ? T.height * T.ballHeightMult : T.height;
+  const targetHeight = p.crumpled ? T.height * T.crumpleHeightMult : T.height;
   p.height = approach(p.height, targetHeight, 6.0, dt);
 
   // ---------------- wish direction ----------------
@@ -154,11 +155,11 @@ export function stepPlayer(p, input, world, dt) {
     p.vel.y = approach(p.vel.y, -T.glideFallSpeed, 26, dt);
   } else if (p.grounded) {
     // ---------------- ground ----------------
-    applyFriction(p.vel, p.ball ? T.ballFriction : T.friction, T.stopSpeed, dt);
-    const maxS = p.ball ? T.ballMaxSpeed
+    applyFriction(p.vel, p.crumpled ? T.crumpleFriction : T.friction, T.stopSpeed, dt);
+    const maxS = p.crumpled ? T.crumpleMaxSpeed
                : T.maxSpeed * (p.stance === STANCE.EDGE_ON ? T.edgeSpeedMult : 1)
                             * (input.scoped ? T.scopeSpeedMult : 1);
-    const acc = p.ball ? T.ballAccel : T.accel;
+    const acc = p.crumpled ? T.crumpleAccel : T.accel;
     if (wishing) accelerate(p.vel, wx, wz, maxS, acc, dt);
   } else {
     // ---------------- air ----------------
@@ -171,7 +172,7 @@ export function stepPlayer(p, input, world, dt) {
   if (!p.gliding) {
     const wantJump = p.buffered > 0 || (T.autoHop && input.jump);
     if (wantJump && p.coyote > 0) {
-      p.vel.y = T.jumpVel * (p.ball ? T.ballJumpMult : 1);
+      p.vel.y = T.jumpVel * (p.crumpled ? T.crumpleJumpMult : 1);
       p.grounded = false;
       p.buffered = 0; p.coyote = 0;
       p.apex = p.pos.y;
@@ -181,7 +182,7 @@ export function stepPlayer(p, input, world, dt) {
   // ---------------- integrate ----------------
   const fallSpeed = p.vel.y;
   const r = moveAndCollide(p.pos, p.vel, T.halfWidth, p.height, dt, solids,
-                           p.ball ? T.stepHeight * 0.5 : T.stepHeight, wasGrounded);
+                           p.crumpled ? T.stepHeight * 0.5 : T.stepHeight, wasGrounded);
   p.grounded = r.grounded;
 
   if (p.grounded) {
@@ -192,20 +193,20 @@ export function stepPlayer(p, input, world, dt) {
       p.recover = T.glideRecoverTime;
       p.stance = STANCE.RECOVER;
       p.vel.x *= 0.25; p.vel.z *= 0.25;
-    } else if (p.ball && fallSpeed < -4) {
-      p.vel.y = -fallSpeed * T.ballBounce;    // a ball bounces
+    } else if (p.crumpled && fallSpeed < -4) {
+      p.vel.y = -fallSpeed * T.crumpleBounce;    // a ball bounces
       p.grounded = false;
     }
   }
 
   // ---------------- facing, flip, roll ----------------
-  if (wishing && !p.ball) {
+  if (wishing && !p.crumpled) {
     const want = (wx * cy - wz * sy) >= 0 ? 1 : -1;
     if (want !== p.facing) { p.facing = want; p.flipT = 0; }
   }
   p.flipT = Math.min(1, p.flipT + dt * 9);
   p.speed = Math.hypot(p.vel.x, p.vel.z);
-  if (p.ball) p.roll += (p.speed / Math.max(0.35, T.height * T.ballHeightMult * 0.5)) * dt;
+  if (p.crumpled) p.roll += (p.speed / Math.max(0.35, T.height * T.crumpleHeightMult * 0.5)) * dt;
 
   if (!p.grounded) p.apex = Math.max(p.apex, p.pos.y);
   return r;

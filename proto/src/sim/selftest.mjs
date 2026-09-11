@@ -194,14 +194,14 @@ console.log('\n--- edge-on ---');
      full.toFixed(2) + ' -> ' + q.speed.toFixed(2) + ' m/s');
 }
 
-console.log('\n--- ball ---');
+console.log('\n--- crumple ---');
 {
   const w = flatWorld();
   // no speed gate: holding crouch IS the stance
   const p = makePlayer(0, 0, 0);
   run(p, w, inp({ crouch: true }), 0.2);
-  ok('holding crouch from standing still makes a ball', p.ball === true);
-  ok('can shoot from inside the ball', canShoot(p) === true);
+  ok('holding crouch from standing still crumples', p.crumpled === true);
+  ok('can shoot while crumpled', canShoot(p) === true);
   run(p, w, inp({ crouch: true }), 0.4);
   ok('height drops', p.height < T.height * 0.6, p.height.toFixed(2) + 'm');
 
@@ -210,29 +210,31 @@ console.log('\n--- ball ---');
   run(q, w, inp({ fwd: 1 }), 2.5);
   const before = q.speed;
   run(q, w, inp({ fwd: 1, crouch: true }), TICK * 2);
-  ok('entering with speed boosts', q.speed > before + 1.0,
+  ok('entering with speed boosts', q.speed > before + 0.5,
      before.toFixed(2) + ' -> ' + q.speed.toFixed(2));
 
-  // and it keeps rolling -- a ball does not come to a stop
+  // it coasts rather than stopping dead -- but it is not frictionless
   const r2 = makePlayer(0, 0, 0);
   run(r2, w, inp({ fwd: 1 }), 2.0);
   run(r2, w, inp({ fwd: 1, crouch: true }), 0.5);
   const rollSpeed = r2.speed;
   run(r2, w, inp({ crouch: true }), 2.0);       // let go of the stick entirely
-  ok('still rolling 2s after input stops', r2.speed > rollSpeed * 0.35,
+  ok('still rolling 2s after input stops', r2.speed > 1.0,
      rollSpeed.toFixed(2) + ' -> ' + r2.speed.toFixed(2) + ' m/s');
+  ok('but it does bleed speed -- not frictionless', r2.speed < rollSpeed * 0.45,
+     'kept ' + (100 * r2.speed / rollSpeed).toFixed(0) + '%');
 
   // compare against standing, which stops dead
   const walk = makePlayer(0, 0, 0);
   run(walk, w, inp({ fwd: 1 }), 2.0);
   run(walk, w, inp(), 2.0);
   ok('standing stops dead by comparison', walk.speed < 0.01 && r2.speed > 1.0,
-     'walk ' + walk.speed.toFixed(3) + ' vs ball ' + r2.speed.toFixed(2));
+     'walk ' + walk.speed.toFixed(3) + ' vs crumple ' + r2.speed.toFixed(2));
 
-  ok('the ball visibly rolls', r2.roll > 1.0, 'roll=' + r2.roll.toFixed(1) + ' rad');
+  ok('it visibly rolls', r2.roll > 1.0, 'roll=' + r2.roll.toFixed(1) + ' rad');
 }
 
-console.log('\n--- ball tunnel clearance ---');
+console.log('\n--- crumple tunnel clearance ---');
 {
   const w = flatWorld();
   addBox(w, 17, 2.1, 0, 6, 2.0, 6, 'low ceiling');
@@ -240,7 +242,7 @@ console.log('\n--- ball tunnel clearance ---');
   run(p, w, inp({ right: 1 }), 1.2);
   run(p, w, inp({ right: 1, crouch: true }), 2.5);
   ok('rolls under a 1.1m ceiling', p.pos.x > 20, 'x=' + p.pos.x.toFixed(2));
-  ok('cannot stand up until clear', p.ball === true || p.pos.x > 20);
+  ok('cannot stand up until clear', p.crumpled === true || p.pos.x > 20);
   const q = makePlayer(0, 0, 0);
   run(q, w, inp({ right: 1 }), 4.0);
   ok('standing is blocked by the same tunnel', q.pos.x < 14.1, 'x=' + q.pos.x.toFixed(2));
