@@ -27,6 +27,7 @@ export default {
   build() {
     const b = createBuilder('The Fold');
     b.ground(0, 0, 108, 72);
+    b.pageEdge(0, 0, 108, 72);
 
     // ---- one side of the valley, then mirrored across z ----
     const TIER = [3.0, 6.0, 9.0, 12.0];
@@ -55,8 +56,11 @@ export default {
     // fold ridges cut the valley into four rooms, so the full-length shot is
     // only on offer from the very ends
     for (const x of [-26, 0, 26]) {
+      b.kerb(x, -6, 3.2, 12, 0.2); b.kerb(x, 6, 3.2, 12, 0.2);
       b.box(x, 1.6, -6, 3.2, 3.2, 12, TONE.block, STYLE.grid);
       b.box(x, 1.6, 6, 3.2, 3.2, 12, TONE.block, STYLE.grid);
+      b.box(x, 3.34, -6, 3.9, 0.28, 12.6, TONE.dark, STYLE.plain);
+      b.box(x, 3.34, 6, 3.9, 0.28, 12.6, TONE.dark, STYLE.plain);
       b.wall(x, 0, 3.2, 4.0, 1.15);
     }
     b.inkwell(-13, 0, 0);

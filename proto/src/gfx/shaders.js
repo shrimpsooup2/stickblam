@@ -21,6 +21,7 @@ out vec3 vWorld;
 out vec3 vNormal;
 out float vTone;
 out float vStyle;
+out float vBase;
 
 void main(){
   vec3 world = iCenter + aPos * iSize;
@@ -28,6 +29,7 @@ void main(){
   vNormal = aNormal;
   vTone   = iTone.x;
   vStyle  = iTone.y;
+  vBase   = iCenter.y - iSize.y * 0.5;
   gl_Position = uViewProj * vec4(world, 1.0);
 }`;
 
@@ -36,6 +38,7 @@ in vec3 vWorld;
 in vec3 vNormal;
 in float vTone;
 in float vStyle;
+in float vBase;
 
 layout(location=0) out vec4 oColor;
 layout(location=1) out vec4 oNormalDepth;
@@ -64,7 +67,7 @@ void main(){
   float ndl = dot(n, normalize(uLightDir));
 
   // two-tone ramp -- no gradient, ever
-  float band = ndl > 0.15 ? 1.0 : 0.62;
+  float band = ndl > 0.15 ? 1.0 : 0.76;
   float tone = vTone * band;
 
   // ruled paper on up-facing surfaces
@@ -79,9 +82,22 @@ void main(){
     tone = mix(tone, tone * 0.88, grid);
   }
 
+  // --- grounding: ink pools where a surface meets whatever it stands on ---
+  // Without this every box floats, because a monochrome world gives the eye no
+  // contact cue at all.
+  float above = vWorld.y - vBase;
+  float pool = (1.0 - smoothstep(0.0, 1.15, above)) * (1.0 - abs(n.y));
+  tone *= 1.0 - pool * 0.34;
+
+  // --- aerial perspective ---
+  // The single biggest depth cue available here. Distant geometry washes toward
+  // the paper tone, exactly the way a pencil drawing lightens with distance.
+  float d = length(vWorld - uCamPos);
+  float haze = 1.0 - exp(-d * 0.0082);
+  tone = mix(tone, 0.93, haze * 0.66);
+
   oColor = vec4(vec3(tone), 1.0);
-  float dist = length(vWorld - uCamPos) / uFar;
-  oNormalDepth = vec4(n * 0.5 + 0.5, dist);
+  oNormalDepth = vec4(n * 0.5 + 0.5, d / uFar);
 }`;
 
 // -------------------------------------------------------------- billboards --
@@ -146,6 +162,8 @@ void main(){
   // Ink is the only true black in the world; a loaded player renders darker.
   float tone = mix(0.30, 0.02, vInk);
   tone = mix(0.86, tone, a);        // soften only the true stroke edges
+  float haze = 1.0 - exp(-vDist * 0.0082);
+  tone = mix(tone, 0.93, haze * 0.44);   // less than the world: keep players readable
   oColor = vec4(vec3(tone), 1.0);
   oNormalDepth = vec4(0.5, 0.5, 1.0, gl_FragCoord.z * 0.999);
 }`;
@@ -227,9 +245,9 @@ float hatch(vec2 frag, float tone){
   float h = 0.0;
   float a = frag.x + frag.y;
   float b = frag.x - frag.y;
-  if (tone < 0.72) h = max(h, step(0.62, fract(a * 0.13)));
-  if (tone < 0.50) h = max(h, step(0.62, fract(b * 0.13)));
-  if (tone < 0.33) h = max(h, step(0.62, fract(a * 0.26 + 0.37)));
+  if (tone < 0.54) h = max(h, step(0.70, fract(a * 0.11)));
+  if (tone < 0.38) h = max(h, step(0.70, fract(b * 0.11)));
+  if (tone < 0.24) h = max(h, step(0.70, fract(a * 0.22 + 0.37)));
   return h;
 }
 
@@ -255,11 +273,13 @@ void main(){
     e = max(e, (1.0 - dot(sm.xyz * 2.0 - 1.0, n0)) * 2.2);
   }
   e = smoothstep(0.42, 0.9, clamp(e, 0.0, 1.0)) * uOutline;
+  // outlines fade with the geometry they wrap, or distance stays razor-edged
+  e *= 1.0 - smoothstep(0.22, 0.80, d0);
   if (sky) e = 0.0;
 
   float tone = col.r;
   float h = hatch(gl_FragCoord.xy, tone) * uHatch;
-  tone = mix(tone, tone * 0.58, h * (1.0 - smoothstep(0.55, 0.92, tone)));
+  tone = mix(tone, tone * 0.66, h * (1.0 - smoothstep(0.42, 0.80, tone)));
 
   // ink is the only true black: outlines go almost all the way down
   tone = mix(tone, 0.04, e);

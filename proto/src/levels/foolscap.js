@@ -25,6 +25,7 @@ export default {
   build() {
     const b = createBuilder('Foolscap');
     b.ground(0, 0, 84, 84);
+    b.pageEdge(0, 0, 84, 84);
 
     // ---- one half, then mirrored ----
     b.mural(0, 0, -34);
@@ -45,24 +46,26 @@ export default {
     // the pencil stacks: the only glide platforms on the map, one per flank
     for (const sx of [-1, 1]) {
       const x = sx * 27;
-      b.building(x, -14, 5.5, 5.5, 9.0, TONE.dark);
+      b.tower(x, -14, 5.5, 5.5, 9.0, TONE.dark, sx < 0 ? 'x+' : 'x-');
+      b.parapet(x, 9.36, -14, 6.3, 6.3, 0.8);
       b.stairs(x, 0, -19, 'z', 12, 0.75, 1.1, 4.0);
       b.label(x, 10.4, -14, '9m — glide off', 'note');
       b.card(x, 9.0, -14);            // the reward for climbing is a card, not a gun nest
     }
 
     // loose crumpled-paper cover, asymmetric within the symmetric lanes
-    b.box(-13, 1.1, -20, 2.6, 2.2, 2.6, TONE.light);
-    b.box(12, 0.9, -24, 2.0, 1.8, 2.0, TONE.light);
-    b.box(-6, 0.8, -12, 1.8, 1.6, 1.8, TONE.light);
-    b.box(16, 1.2, -11, 2.4, 2.4, 2.4, TONE.light);
+    for (const [x, z, sz] of [[-13, -20, 2.6], [12, -24, 2.0], [-6, -12, 1.8], [16, -11, 2.4]]) {
+      b.kerb(x, z, sz, sz, 0.16);
+      b.box(x, sz / 2 + 0.16, z, sz, sz, sz, TONE.light);
+    }
     b.card(-19, 0, -22);
 
     b.mirrorZ();
 
     // ---- centre, built after the mirror so it is not duplicated ----
-    b.plat(0, 2.2, 0, 14, 14, TONE.light);
+    b.kerb(0, 0, 14, 14, 0.3);
     b.box(0, 1.1, 0, 14, 2.2, 14, TONE.block, STYLE.grid);
+    b.plat(0, 2.2, 0, 14.6, 14.6, TONE.light);
     b.stairs(-7, 0, 0, 'x', 5, 0.44, 1.0, 8.0);
     b.stairs(7, 0, 0, 'x', 5, 0.44, -1.0, 8.0);
     b.wall(0, -5.5, 9, 0.8, 1.1, TONE.wall);

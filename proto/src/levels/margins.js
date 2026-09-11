@@ -26,6 +26,7 @@ export default {
   build() {
     const b = createBuilder('The Margins');
     b.ground(0, 0, 96, 96);
+    b.pageEdge(0, 0, 96, 96);
 
     const GRID = [-31.5, -10.5, 10.5, 31.5];   // 14m blocks, 7m streets
     const H = [
@@ -36,19 +37,30 @@ export default {
     ];
     // four stilted blocks: the crawl network, chosen to make diagonals
     const STILT = new Set(['1,1', '2,2', '0,3', '3,0']);
+    // six hollow blocks: a city needs somewhere to be *inside*
+    const SHELL = new Set(['0,1', '1,2', '2,0', '3,2', '1,0', '2,3']);
+    const DOOR = ['z-', 'z+', 'x-', 'x+'];
 
     for (let i = 0; i < 4; i++) {
       for (let j = 0; j < 4; j++) {
         const x = GRID[i], z = GRID[j], h = H[i][j];
+        const key = i + ',' + j;
         const tone = 0.52 + ((i + j) % 3) * 0.07;
-        if (STILT.has(i + ',' + j)) {
-          // floats on a crawlspace: standing height is blocked, crumple is not
+        b.pavement(x, z, 14, 14, 2.6);
+        if (STILT.has(key)) {
+          // floats on a crawlspace: standing height is blocked, crumple is not.
+          // Corner posts only -- legs through the middle would close the route.
           b.box(x, M.crouchFit + (h - M.crouchFit) / 2, z, 14, h - M.crouchFit, 14, tone, STYLE.grid);
-          b.label(x, 1.6, z, 'crawl', 'note');
+          for (const sx of [-1, 1]) for (const sz of [-1, 1])
+            b.box(x + sx * 6.4, M.crouchFit / 2, z + sz * 6.4, 0.7, M.crouchFit, 0.7, TONE.dark);
+          b.box(x, h + 0.18, z, 14.8, 0.34, 14.8, TONE.dark, STYLE.plain);
+          b.label(x, 1.5, z, 'crawl', 'note');
+        } else if (SHELL.has(key)) {
+          b.shell(x, z, 14, 14, h, DOOR[(i + j) % 4], tone);
         } else {
-          b.building(x, z, 14, 14, h, tone);
+          b.tower(x, z, 14, 14, h, tone, DOOR[(i * 2 + j) % 4]);
         }
-        // street-level doorways and awnings, to break the long grid sightlines
+        // awnings over the pavement, to break the long grid sightlines
         if ((i + j) % 2 === 0) b.wall(x, z + 8.6, 6, 0.6, 1.2);
       }
     }
@@ -67,7 +79,16 @@ export default {
       const y = Math.min(H[i1][j1], H[i2][j2]);
       const x = (GRID[i1] + GRID[i2]) / 2, z = (GRID[j1] + GRID[j2]) / 2;
       const along = i1 === i2 ? 'z' : 'x';
-      b.plat(x, y, z, along === 'x' ? 9 : 2.2, along === 'x' ? 2.2 : 9, TONE.accent);
+      const bw = along === 'x' ? 9 : 2.2, bd = along === 'x' ? 2.2 : 9;
+      b.plat(x, y, z, bw, bd, TONE.accent);
+      // handrails: a plank at 13m with no edge is unreadable to walk
+      if (along === 'x') {
+        b.box(x, y + 0.45, z - bd / 2, bw, 0.9, 0.16, TONE.dark);
+        b.box(x, y + 0.45, z + bd / 2, bw, 0.9, 0.16, TONE.dark);
+      } else {
+        b.box(x - bw / 2, y + 0.45, z, 0.16, 0.9, bd, TONE.dark);
+        b.box(x + bw / 2, y + 0.45, z, 0.16, 0.9, bd, TONE.dark);
+      }
     };
     bridge(0, 0, 1, 0); bridge(1, 1, 1, 2); bridge(2, 2, 3, 2);
     bridge(0, 2, 0, 3); bridge(2, 0, 3, 0); bridge(1, 3, 2, 3);

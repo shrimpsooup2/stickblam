@@ -38,7 +38,55 @@ review, not as a silent break.
 
 ---
 
-## 2. Shared flow vocabulary
+## 2. Making a blockout read in 3D
+
+The first pass of these maps was designed and reviewed entirely in plan. They
+worked as diagrams and fell apart at eye level, which is exactly the failure mode
+plan-view review produces. Standing in them, four things were wrong:
+
+| Problem | Why it broke the space |
+| --- | --- |
+| **Nothing was grounded** | Every box met the floor with no contact, so all of it floated. |
+| **No depth cue at all** | A box at 10m and one at 60m rendered identically. In a monochrome world there is no colour perspective to fall back on, so depth simply did not exist. |
+| **Buildings were bare boxes** | A box is a wall, not a building. A "street" was two grey slabs with a gap. |
+| **No boundary, no floor treatment** | Ground ran past the play space into nothing, and streets had no pavement — just a gap between walls. |
+
+### What fixed it
+
+**Aerial perspective, first.** Distant geometry now washes toward the paper tone.
+This was the single biggest win by a wide margin — without it no amount of
+geometry helps, because nothing tells the eye what is far away. Outlines fade
+with the geometry they wrap, and sprites haze less than the world so players stay
+readable at range.
+
+**Ink pooling at contact.** Surfaces darken where they meet whatever they stand
+on. Thematically it is ink settling at the bottom of a stroke; functionally it is
+the contact shadow that stops everything floating.
+
+**Hatching marks shadow, not every surface.** The thresholds were set so wide that
+every mid-tone wall came out as texture rather than form. Unlit faces also sat too
+dark, pushing them further into the hatch range.
+
+**An architectural vocabulary in `builder.js`** — the parts that make a volume
+read as a place rather than a collision volume:
+
+| Helper | What it is for |
+| --- | --- |
+| `kerb` | A plinth under a structure so it sits *on* the ground. |
+| `tower` | Plinth, floor bands every 3.4m, window ledges, door canopy, overhanging roofline. The floor bands make height countable and the roofline stops a box reading as infinite. |
+| `shell` | A hollow building: four walls, a doorway, a walkable roof. Somewhere to be *inside* — which is most of what makes a city a city. |
+| `legs` | Pillars under raised platforms. Nothing floats. |
+| `parapet` | A low wall round a roof edge, so you can see where the roof stops. |
+| `pavement` | A raised kerbed strip round a block. A street needs a floor, not just a gap. |
+| `pageEdge` | A darker rim and nothing beyond it. |
+
+**Still missing:** interior detail in the shells, any overhead cover, and props at
+human scale beyond door canopies. The spaces are coherent now; they are not yet
+furnished.
+
+---
+
+## 3. Shared flow vocabulary
 
 - **Lane** — a route from one spawn toward the other. Every map has at least three
   so no single hold wins.
@@ -55,7 +103,7 @@ height and scoring are in permanent tension.
 
 ---
 
-## 3. The maps
+## 4. The maps
 
 | | Type | Size | Spawn → spawn | Tallest | Identity |
 | --- | --- | --- | --- | --- | --- |
@@ -147,7 +195,7 @@ second choice and arguably more on-theme for a folded page.
 
 ---
 
-## 4. Open questions
+## 5. Open questions
 
 1. **Are these too big?** Sized for 8–12 players at 7.6 m/s. Margins at 16.4s
    spawn-to-spawn is the outlier — about 8s to first contact, which is on the slow

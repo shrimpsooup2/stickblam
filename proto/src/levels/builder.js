@@ -99,6 +99,122 @@ export function createBuilder(name) {
 
     label(x, y, z, text, kind = '') { labels.push({ x, y, z, text, kind }); return api; },
 
+    // ---------------------------------------------------------------------
+    // Architecture. A bare box is a wall, not a building: at eye level it has
+    // no scale, nothing to sit on the ground, and no roofline. These helpers
+    // add the parts that make a volume read as a place.
+    // ---------------------------------------------------------------------
+
+    /** A plinth under a structure, slightly proud of it, so it sits on the floor. */
+    kerb(cx, cz, sx, sz, h = 0.22, tone = TONE.dark) {
+      return api.box(cx, h / 2, cz, sx + 0.7, h, sz + 0.7, tone, STYLE.plain);
+    },
+
+    /** Pavement around a block: the street needs a floor, not just a gap. */
+    pavement(cx, cz, sx, sz, out = 2.6, tone = TONE.light) {
+      api.box(cx, 0.07, cz, sx + out * 2, 0.14, sz + out * 2, tone, STYLE.plain);
+      // kerb lip, so the pavement edge reads from across the street
+      for (const [x, z, w, d] of [
+        [cx, cz - sz / 2 - out, sx + out * 2, 0.3], [cx, cz + sz / 2 + out, sx + out * 2, 0.3],
+        [cx - sx / 2 - out, cz, 0.3, sz + out * 2], [cx + sx / 2 + out, cz, 0.3, sz + out * 2],
+      ]) api.box(x, 0.09, z, w, 0.18, d, TONE.dark, STYLE.plain);
+      return api;
+    },
+
+    /** Pillars under a raised platform. Nothing should float. */
+    legs(cx, y, cz, sx, sz, tone = TONE.dark) {
+      const nx = Math.max(2, Math.round(sx / 4.5)), nz = Math.max(2, Math.round(sz / 4.5));
+      for (let i = 0; i < nx; i++) {
+        for (let j = 0; j < nz; j++) {
+          const px = cx - sx / 2 + 0.5 + (i / Math.max(1, nx - 1)) * (sx - 1);
+          const pz = cz - sz / 2 + 0.5 + (j / Math.max(1, nz - 1)) * (sz - 1);
+          api.box(px, y / 2, pz, 0.45, y, 0.45, tone, STYLE.plain);
+        }
+      }
+      return api;
+    },
+
+    /** A low wall round a roof edge, so you can see where the roof stops. */
+    parapet(cx, y, cz, sx, sz, h = 0.85, tone = TONE.wall) {
+      api.box(cx, y + h / 2, cz - sz / 2, sx, h, 0.35, tone, STYLE.plain);
+      api.box(cx, y + h / 2, cz + sz / 2, sx, h, 0.35, tone, STYLE.plain);
+      api.box(cx - sx / 2, y + h / 2, cz, 0.35, h, sz, tone, STYLE.plain);
+      api.box(cx + sx / 2, y + h / 2, cz, 0.35, h, sz, tone, STYLE.plain);
+      return api;
+    },
+
+    /**
+     * A solid building with a facade: plinth, floor bands, window ledges, a door
+     * canopy and an overhanging roofline. The detail is proud of the face rather
+     * than cut into it, because the solver only does solid boxes -- but proud
+     * detail is what gives a wall scale at eye level anyway.
+     */
+    tower(cx, cz, sx, sz, h, tone = TONE.block, doorSide = 'z-') {
+      api.kerb(cx, cz, sx, sz, 0.24);
+      api.box(cx, h / 2, cz, sx, h, sz, tone, STYLE.grid, 'building');
+
+      const FLOOR = 3.4;                       // a storey, so height is countable
+      for (let y = FLOOR; y < h - 0.9; y += FLOOR) {
+        api.box(cx, y, cz - sz / 2 - 0.12, sx * 0.94, 0.16, 0.3, TONE.dark, STYLE.plain);
+        api.box(cx, y, cz + sz / 2 + 0.12, sx * 0.94, 0.16, 0.3, TONE.dark, STYLE.plain);
+        api.box(cx - sx / 2 - 0.12, y, cz, 0.3, 0.16, sz * 0.94, TONE.dark, STYLE.plain);
+        api.box(cx + sx / 2 + 0.12, y, cz, 0.3, 0.16, sz * 0.94, TONE.dark, STYLE.plain);
+      }
+      // roofline overhang -- the thing that makes a box stop looking infinite
+      api.box(cx, h + 0.18, cz, sx + 0.8, 0.36, sz + 0.8, TONE.dark, STYLE.plain);
+      // door canopy at human scale, so the eye has something to measure by
+      const dz = doorSide === 'z-' ? -1 : doorSide === 'z+' ? 1 : 0;
+      const dx = doorSide === 'x-' ? -1 : doorSide === 'x+' ? 1 : 0;
+      api.box(cx + dx * (sx / 2 + 0.5), 2.35, cz + dz * (sz / 2 + 0.5),
+              dx ? 1.0 : 2.6, 0.22, dz ? 1.0 : 2.6, TONE.dark, STYLE.plain);
+      return api;
+    },
+
+    /**
+     * A hollow building: four walls with a doorway gap, and an open roof you can
+     * stand on. This is what makes a city a city -- somewhere to be *inside*.
+     */
+    shell(cx, cz, sx, sz, h, doorSide = 'z-', tone = TONE.block, doorW = 2.6) {
+      const t = 0.6;
+      api.kerb(cx, cz, sx, sz, 0.2);
+      const side = (which, wx, wy, wz, ww, wh, wd) => {
+        if (which !== doorSide) { api.box(wx, wy, wz, ww, wh, wd, tone, STYLE.grid); return; }
+        // split the wall either side of a doorway, and lintel over the top
+        const along = (which[0] === 'z') ? 'x' : 'z';
+        const full = along === 'x' ? ww : wd;
+        const seg = (full - doorW) / 2;
+        const off = doorW / 2 + seg / 2;
+        const door = M.standFit + 0.3;
+        if (along === 'x') {
+          api.box(wx - off, wy, wz, seg, wh, wd, tone, STYLE.grid);
+          api.box(wx + off, wy, wz, seg, wh, wd, tone, STYLE.grid);
+          api.box(wx, door + (h - door) / 2, wz, doorW, h - door, wd, tone, STYLE.grid);
+        } else {
+          api.box(wx, wy, wz - off, ww, wh, seg, tone, STYLE.grid);
+          api.box(wx, wy, wz + off, ww, wh, seg, tone, STYLE.grid);
+          api.box(wx, door + (h - door) / 2, wz, ww, h - door, doorW, tone, STYLE.grid);
+        }
+      };
+      side('z-', cx, h / 2, cz - sz / 2, sx, h, t);
+      side('z+', cx, h / 2, cz + sz / 2, sx, h, t);
+      side('x-', cx - sx / 2, h / 2, cz, t, h, sz);
+      side('x+', cx + sx / 2, h / 2, cz, t, h, sz);
+      api.plat(cx, h, cz, sx, sz, TONE.light);          // the roof, walkable
+      api.box(cx, h + 0.18, cz, sx + 0.7, 0.3, sz + 0.7, TONE.dark, STYLE.plain);
+      api.parapet(cx, h + 0.33, cz, sx + 0.7, sz + 0.7, 0.8);
+      return api;
+    },
+
+    /** The edge of the page: a darker rim, and nothing at all beyond it. */
+    pageEdge(cx, cz, sx, sz) {
+      const t = 2.2;
+      for (const [x, z, w, d] of [
+        [cx, cz - sz / 2 + t / 2, sx, t], [cx, cz + sz / 2 - t / 2, sx, t],
+        [cx - sx / 2 + t / 2, cz, t, sz], [cx + sx / 2 - t / 2, cz, t, sz],
+      ]) api.box(x, -0.02, z, w, 0.12, d, 0.34, STYLE.plain, 'edge');
+      return api;
+    },
+
     /** Mirror everything built so far across an axis, for symmetric maps. */
     mirrorZ() {
       const n = boxes.length;
