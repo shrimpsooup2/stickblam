@@ -17,10 +17,19 @@ export const T = {
   airControl:          0.9,
 
   // --- jump ---
-  jumpVel:             7.35,  // ~1.23 m apex at g=22
+  jumpVel:             6.30,  // ~0.90m apex. 1.26m was 71% of body height.
   coyoteTime:          0.10,  // still jumpable this long after leaving ground
   jumpBuffer:          0.12,  // early press still fires on landing
   autoHop:            true,   // holding jump re-hops on landing
+
+  // --- Uncurl: the hidden tech ---
+  // Ball up in mid-air, then release it just before you land. Time it and you
+  // convert the fall into speed. Nothing in the UI mentions this.
+  uncurlWindow:        0.13,  // release this long or less before touchdown
+  uncurlMinCurl:       0.10,  // and you must have actually been balled up
+  uncurlGain:          2.40,  // m/s added on a clean release
+  uncurlHop:           0.72,  // fraction of a jump you keep, so it chains
+  uncurlMaxSpeed:     15.0,   // ceiling, or a good player accelerates forever
   stepHeight:          0.38,  // auto-climb ledges up to here
 
   // --- Edge-On: turn a full 90 degrees and become a sliver ---

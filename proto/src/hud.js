@@ -52,7 +52,7 @@ export function createHud(root, post) {
 
   const sliders = root.querySelector('#sliders');
   const inputs = {};
-  const postKeys = { outline: [0, 2], hatch: [0, 2], grain: [0, 2] };
+  const postKeys = { ink: [0, 1.5], inkWidth: [0.5, 10], inkOvershoot: [0, 16], inkWobble: [0, 8], outline: [0, 2], hatch: [0, 2], grain: [0, 2], warp: [0, 8] };
 
   const addSlider = (obj, key, lo, hi) => {
     const row = document.createElement('label');

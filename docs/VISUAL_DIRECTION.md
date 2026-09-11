@@ -233,3 +233,73 @@ implements on paper: pen scratch, marker squeak, the dry hiss of a spraycan, the
 rubber drag of an eraser. Ink pickup is a wet, satisfying *blot*. Death is paper
 crumpling. Every combo gets a distinct sting — a teaching tool as much as a
 reward.
+
+---
+
+## 9. Why the world looked like SketchUp, and what fixed it
+
+The first pass at the world was cel shading plus a screen-space outline. That is
+not a drawing. It is a render with a dark rim on it, and everyone can tell.
+Four separate things gave it away, and each needed a different fix.
+
+### Gradients
+
+A renderer shades a face with a continuous ramp. A drawing has a handful of
+values with borders between them: paper, a light wash, a grey, a hatched grey, a
+dark. So the post pass **quantises** every tone into a five-value palette. This
+is the single change that stops a frame reading as a 3D viewport, because it
+converts a *shaded* face into a *filled* one.
+
+Quantising has a failure mode worth naming: adding noise to the tone before
+quantising, to rough up the step, also punches holes through the middle of any
+face whose value happens to sit on a threshold — a wall at point-blank range
+breaks into grey islands. The perturbation has to be **gated on the local
+gradient** (`fwidth`). Where the tone is flat there is no border to tear, so the
+gate closes and the fill stays a fill; where a real ramp crosses a threshold the
+gate opens and the step comes out ragged.
+
+### Uniform lines
+
+A post-process outline can only darken pixels where a discontinuity already
+exists. It is therefore always one width, always exactly on the silhouette, and
+always closed. A pen is none of those things. So every box edge is drawn as a
+**real screen-space ribbon** that:
+
+- runs past the corner, or stops short of it, independently at each end;
+- varies in weight edge to edge and along its own length;
+- bows, with a *smooth* tremor — sampling a hash per segment kinks the
+  centreline, and a line made of kinks reads as hairy scribble rather than as a
+  confident stroke that happens not to be straight;
+- skips where the nib runs dry, and pools where it stops;
+- gets a second or third pass at random, offset, for the gone-over-twice look;
+- is re-placed in **world space** every boil tick, so the drawing never sits
+  exactly on the shape it describes.
+
+Ink obeys aerial perspective like everything else, and strokes fade out by their
+**screen** length — nobody draws a line shorter than the nib. That second rule is
+what lets a 46-step spiral stair resolve into a shape at range instead of a mat
+of overlapping scribble. It is the same simplification a person makes by hand.
+
+### Hatching that is really a texture
+
+Hatching reads as pen or as fabric depending on two things. **Duty cycle**: a
+hatch line is thin, with plenty of paper showing between strokes; fat strokes at
+a low duty cross into each other and the face turns into chain-link. And
+**direction**: two layers at similar spacing crossing each other make a regular
+diamond grid. So darker tones get a second run in the *same* direction, spacing
+is jittered per stroke, strokes end, and hatching is reserved for genuinely dark
+faces — a mid grey is left as a flat fill, the way it would be on paper.
+
+### Crisp silhouettes
+
+Even with all the linework wobbling, the *fills* still met the page along a
+mathematically exact polygon edge. The whole frame is displaced by a couple of
+pixels of slow noise, re-rolled on the boil tick, which puts every edge in the
+picture slightly out of true and ties the frame to one sheet of paper.
+
+### The rule underneath all four
+
+Repetition is the tell. Ruled floor lines, evenly spaced hatching, constant line
+weight, a tiled grid on a wall — each of these is a *machine* signature, and a
+single one of them will sink an otherwise hand-made frame. Anything that repeats
+needs per-instance weight, per-instance spacing, and gaps.

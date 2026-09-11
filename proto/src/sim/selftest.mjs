@@ -259,6 +259,49 @@ console.log('\n--- crumple tunnel clearance ---');
   ok('standing is blocked by the same tunnel', q.pos.x < 14.1, 'x=' + q.pos.x.toFixed(2));
 }
 
+console.log('\n--- uncurl (hidden tech) ---');
+{
+  const w = flatWorld();
+  // Run up, jump, ball up on the way through the arc, release at a given height.
+  // Note the clearance right after take-off is ~0, so the release test has to be
+  // gated on falling -- otherwise it fires on the first tick and never curls.
+  function attempt(releaseAt) {
+    const p = makePlayer(0, 0, 0);
+    run(p, w, inp({ fwd: 1 }), 2.5);
+    const entry = p.speed;
+    stepPlayer(p, inp({ fwd: 1, jump: true }), w, TICK);
+    let released = false;
+    for (let i = 0; i < 400; i++) {
+      if (!released && p.vel.y < 0 && p.clearance <= releaseAt) released = true;
+      const before = p.grounded;
+      stepPlayer(p, inp({ fwd: 1, crouch: !released }), w, TICK);
+      if (!before && p.grounded) break;
+      if (p.uncurlOk > 0) break;
+    }
+    return { p, entry };
+  }
+  const good = attempt(0.15);          // ~0.12s from touchdown, inside the window
+  ok('a clean release converts the fall into speed', good.p.speed > good.entry + 1.0,
+     good.entry.toFixed(2) + ' -> ' + good.p.speed.toFixed(2) + ' m/s');
+  ok('and hops you straight back out so it chains', good.p.vel.y > 3,
+     'vy=' + good.p.vel.y.toFixed(2));
+
+  const early = attempt(0.80);         // ~0.27s out, well outside it
+  ok('releasing too early gets nothing', early.p.speed < early.entry + 0.4,
+     early.entry.toFixed(2) + ' -> ' + early.p.speed.toFixed(2) + ' m/s');
+
+  // never balled up at all -- a plain jump must not boost
+  const plain = makePlayer(0, 0, 0);
+  run(plain, w, inp({ fwd: 1 }), 2.5);
+  const pe = plain.speed;
+  stepPlayer(plain, inp({ fwd: 1, jump: true }), w, TICK);
+  for (let i = 0; i < 400; i++) { const b = plain.grounded; stepPlayer(plain, inp({ fwd: 1 }), w, TICK); if (!b && plain.grounded) break; }
+  ok('a plain jump is not a boost', plain.speed <= pe + 0.05,
+     pe.toFixed(2) + ' -> ' + plain.speed.toFixed(2) + ' m/s');
+
+  ok('the boost is capped', T.uncurlMaxSpeed < 20);
+}
+
 console.log('\n--- ground clearance ---');
 {
   const w = flatWorld();

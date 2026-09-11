@@ -26,7 +26,12 @@ const player = makePlayer(level.world.spawn.x, level.world.spawn.y, level.world.
 player.yaw = level.world.spawnYaw;
 let sim = makeSim(level.world, player);
 
-const post = { time: 0, hatch: 1.0, grain: 0.75, outline: 1.0 };
+// The drawn look comes from real ink strokes on the box edges. The screen-space
+// outline is left on only as a fallback for geometry too small to stroke, and
+// broken into dashes -- running both at full strength gives the doubled, even
+// rim that makes a frame read as a render with a filter rather than a drawing.
+const post = { time: 0, hatch: 1.0, grain: 0.65, outline: 0.14, warp: 2.2,
+               ink: 1.0, inkWidth: 8.0, inkOvershoot: 9.0, inkWobble: 2.0 };
 // Weapon state lives here, not in the sim: it is presentation until Phase 4.
 const gun = { scopeT: 0, recoil: 0, cooldown: 0, bob: 0, swayX: 0, swayY: 0 };
 const hud = createHud(hudRoot, post);
@@ -42,6 +47,7 @@ function loadMap(i) {
   mapIndex = ((i % MAPS.length) + MAPS.length) % MAPS.length;
   level = MAPS[mapIndex].build();
   boxes = level.boxes;
+  renderer.setEdges(boxes);
   sim = makeSim(level.world, player);
   inkMarks.length = 0;
   hud.setLabels(level.labels);
@@ -88,6 +94,7 @@ function traceShot(ox, oy, oz, dx, dy, dz) {
 }
 
 let boxes = level.boxes;
+renderer.setEdges(boxes);
 const sprites = [];
 let last = performance.now(), fps = 60, fpsAcc = 0, fpsN = 0;
 

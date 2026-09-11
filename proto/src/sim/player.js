@@ -94,6 +94,16 @@ export function stepPlayer(p, input, world, dt) {
   // ---------------- crumple ----------------
   // Hold crouch and you crumple into a ball. No speed gate: it is a stance,
   // not a trick you have to earn with speed.
+  // --- uncurl tech bookkeeping ---
+  // Track time spent balled in mid-air, and how long ago it was released.
+  if (p.grounded) { p.airCurl = 0; p.uncurlAt = -1; }
+  else {
+    if (p.crumpled) { p.airCurl += dt; p.uncurlAt = -1; }
+    else if (p.airCurl >= T.uncurlMinCurl && p.uncurlAt < 0) p.uncurlAt = 0;
+    else if (p.uncurlAt >= 0) p.uncurlAt += dt;
+  }
+  p.uncurlOk = Math.max(0, p.uncurlOk - dt * 2.2);
+
   const wantCrumple = input.crouch && !p.gliding;
   if (wantCrumple && !p.crumpled) {
     p.crumpled = true;
@@ -192,6 +202,21 @@ export function stepPlayer(p, input, world, dt) {
 
   if (p.grounded) {
     p.coyote = T.coyoteTime;
+
+    // --- the uncurl payoff ---
+    // Released inside the window, on the same airtime you balled up: the fall
+    // becomes speed, and it hops you straight back out so it chains.
+    if (!wasGrounded && p.uncurlAt >= 0 && p.uncurlAt <= T.uncurlWindow && !p.gliding) {
+      const sp = Math.hypot(p.vel.x, p.vel.z);
+      const target = Math.min(sp + T.uncurlGain, T.uncurlMaxSpeed);
+      if (sp > 0.4) { const k = target / sp; p.vel.x *= k; p.vel.z *= k; }
+      p.vel.y = T.jumpVel * T.uncurlHop;
+      p.grounded = false;
+      p.lastUncurl = p.uncurlAt;
+      p.uncurlOk = 1;
+      p.airCurl = 0; p.uncurlAt = -1;
+    }
+
     if (p.gliding) {
       // A glide always ends the same way: flat on your face.
       p.gliding = false;
