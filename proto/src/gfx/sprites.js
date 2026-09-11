@@ -14,7 +14,10 @@ export const POSES = ['idle', 'run0', 'run1', 'run2', 'jump', 'fall', 'crumple',
 export const VARIANTS = 3;          // three different drawings co-exist, so two
                                     // stickmen side by side are never identical
 export const BOIL_FPS = 8;
-const COLS = 6, CELL_W = 152, CELL_H = 192;
+export const COLS = 6, CELL_W = 152, CELL_H = 192;
+export const SHEET_W = COLS * CELL_W;
+export const SHEET_ROWS = Math.ceil((10 * 3) / COLS);   // POSES.length * VARIANTS
+export const SHEET_H = SHEET_ROWS * CELL_H;
 
 function rng(seed) {
   let s = (seed >>> 0) || 1;
@@ -98,7 +101,7 @@ const P = (x, y) => ({ x, y });
  */
 function poseAngles(name, r) {
   const s = (a, b) => a + (r() - 0.5) * b;
-  const base = { sx: 1, sy: 1, headMul: 1, bend: 0.22 };
+  const base = { sx: 1, sy: 1, headMul: 1, bend: 0.22, anchor: 1 };
   switch (name) {
     case 'run0':    return { ...base, sx: 1.08, sy: .98, lean: s(.16,.06), armL: s(-1.05,.22), armR: s(.95,.22), legL: s(.62,.16), legR: s(-.5,.16) };
     case 'run1':    return { ...base, sx: 1.04, sy: 1.0, lean: s(.20,.06), armL: s(-.3,.22),   armR: s(.3,.22),  legL: s(.08,.12), legR: s(-.14,.12) };
@@ -109,7 +112,8 @@ function poseAngles(name, r) {
     case 'crumple': return { ...base, sx: 1.30, sy: .52, headMul: 1.12, bend: .5,
                              lean: s(1.15,.12), armL: s(-.7,.3), armR: s(.7,.3), legL: s(-1.15,.3), legR: s(1.15,.3) };
     // pulled flat and wide, like a dropped sheet
-    case 'glide':   return { ...base, sx: 1.48, sy: .60, bend: .12,
+    // mid-air, so it hangs in the middle of the cell rather than standing on it
+    case 'glide':   return { ...base, sx: 1.48, sy: .60, bend: .12, anchor: .45,
                              lean: s(1.38,.08), armL: s(-1.75,.15), armR: s(1.35,.15), legL: s(-1.5,.12), legR: s(1.5,.12) };
     // face down on the page, pushing up
     case 'recover': return { ...base, sx: 1.52, sy: .44, headMul: 1.05, bend: .45,
@@ -199,7 +203,12 @@ function skeleton(name, r) {
   const k = Math.min(1, (W - pad * 2) / Math.max(maxx - minx, 1e-3),
                         (H - pad * 2) / Math.max(maxy - miny, 1e-3));
   const ox = W * 0.5 - ((minx + maxx) * 0.5) * k;
-  const oy = H * 0.94 - maxy * k;          // stand the figure on the cell floor
+  // anchor 1 stands the figure on the cell floor; lower values hang it higher up,
+  // which is what an airborne pose needs -- the quad is anchored at the feet.
+  const figH2 = (maxy - miny) * k;
+  const floorY = H * 0.94;                       // where feet rest
+  const bottomY = floorY - (floorY - figH2) * (1 - a.anchor);
+  const oy = bottomY - maxy * k;
   const map = (pt) => P(pt.x * k + ox, pt.y * k + oy);
 
   return {
@@ -208,6 +217,19 @@ function skeleton(name, r) {
     squash: a.thin ? 0.16 : 1.0,
     scale: k,
   };
+}
+
+/** Guides for the hand-drawing template: where the feet, head and node must land. */
+export function poseGuide(name, seed) {
+  const sk = skeleton(name, rng(seed >>> 0 || 1));
+  const node = sk.strokes[0][0];
+  let miny = sk.head.y - sk.head.ry, maxy = sk.head.y + sk.head.ry;
+  let minx = sk.head.x - sk.head.rx, maxx = sk.head.x + sk.head.rx;
+  for (const st of sk.strokes) for (const pt of st) {
+    if (pt.x < minx) minx = pt.x; if (pt.x > maxx) maxx = pt.x;
+    if (pt.y < miny) miny = pt.y; if (pt.y > maxy) maxy = pt.y;
+  }
+  return { head: sk.head, node, bbox: { minx, miny, maxx, maxy }, strokes: sk.strokes };
 }
 
 function drawStickman(ctx, name, seed) {

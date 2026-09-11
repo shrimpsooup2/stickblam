@@ -4,7 +4,7 @@ import { makeSim, advance, renderPos } from './sim/sim.js';
 import { raycast } from './sim/world.js';
 import { createRenderer } from './gfx/renderer.js';
 import { poseFor } from './gfx/sprites.js';
-import { buildTestbed } from './levels/testbed.js';
+import { MAPS } from './levels/index.js';
 import { createInput } from './input.js';
 import { createHud } from './hud.js';
 import { clamp } from './sim/vec3.js';
@@ -20,21 +20,36 @@ try {
   throw err;
 }
 
-const level = buildTestbed();
+let mapIndex = 0;
+let level = MAPS[mapIndex].build();
 const player = makePlayer(level.world.spawn.x, level.world.spawn.y, level.world.spawn.z);
 player.yaw = level.world.spawnYaw;
-const sim = makeSim(level.world, player);
+let sim = makeSim(level.world, player);
 
 const post = { time: 0, hatch: 1.0, grain: 0.75, outline: 1.0 };
 // Weapon state lives here, not in the sim: it is presentation until Phase 4.
 const gun = { scopeT: 0, recoil: 0, cooldown: 0, bob: 0, swayX: 0, swayY: 0 };
 const hud = createHud(hudRoot, post);
 hud.setLabels(level.labels);
+hud.setMap(MAPS[mapIndex]);
 const input = createInput(canvas);
 
 let thirdPerson = false;
 const inkMarks = [];          // flat [x,y,z,ink] * 2 per segment
 const rp = { x: 0, y: 0, z: 0, h: 0 };
+
+function loadMap(i) {
+  mapIndex = ((i % MAPS.length) + MAPS.length) % MAPS.length;
+  level = MAPS[mapIndex].build();
+  boxes = level.boxes;
+  sim = makeSim(level.world, player);
+  inkMarks.length = 0;
+  hud.setLabels(level.labels);
+hud.setMap(MAPS[mapIndex]);
+  hud.setMap(MAPS[mapIndex]);
+  respawn();
+  player.yaw = level.world.spawnYaw;
+}
 
 function respawn() {
   player.pos.x = level.world.spawn.x;
@@ -72,7 +87,7 @@ function traceShot(ox, oy, oz, dx, dy, dz) {
   while (inkMarks.length > 8000 * 4) inkMarks.splice(0, 8 * 4);
 }
 
-const boxes = level.boxes;
+let boxes = level.boxes;
 const sprites = [];
 let last = performance.now(), fps = 60, fpsAcc = 0, fpsN = 0;
 
@@ -90,7 +105,7 @@ function frame(now) {
   const st = input.sample();
   const m = input.consumeMouse();
   if (input.state.locked) {
-    player.yaw -= m.dx * T.lookSensitivity;
+    player.yaw += m.dx * T.lookSensitivity;
     player.pitch = clamp(player.pitch - m.dy * T.lookSensitivity, -1.52, 1.52);
     hud.hideHint();
   }
@@ -100,6 +115,7 @@ function frame(now) {
   }
   if (input.consume('view')) thirdPerson = !thirdPerson;
   if (input.consume('respawn')) respawn();
+  if (input.consume('map')) loadMap(mapIndex + 1);
   if (input.consume('panel')) hud.togglePanel();
   if (player.pos.y < -40) respawn();
 
@@ -192,5 +208,6 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.__stickblam = { player, sim, level, T, post, gun, gl: renderer.gl, atlas: renderer.atlas,
+window.__stickblam = { player, get sim() { return sim; }, get level() { return level; },
+  T, post, gun, MAPS, loadMap, get mapIndex() { return mapIndex; }, gl: renderer.gl, atlas: renderer.atlas,
   get spriteCount(){ return sprites.length / 12; }, get firstSprite(){ return sprites.slice(0,12); } };

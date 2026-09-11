@@ -35,6 +35,7 @@ export function createHud(root, post) {
 
   root.innerHTML = `
     <div id="readout"></div>
+    <div id="mapcard"></div>
     <div id="crosshair"><i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i><i class="ring"></i></div>
     <div id="labels"></div>
     <div id="panel">
@@ -126,6 +127,15 @@ export function createHud(root, post) {
     }
   }
 
+  const mapcard = root.querySelector('#mapcard');
+  function setMap(m) {
+    mapcard.innerHTML = `<b>${m.name}</b><em>${m.kind}</em><span>${m.blurb}</span>
+      <i>${m.size[0]} &times; ${m.size[1]} m &nbsp;·&nbsp; press M for the next map</i>`;
+    mapcard.classList.remove('fade');
+    void mapcard.offsetWidth;
+    mapcard.classList.add('fade');
+  }
+
   const cross = root.querySelector('#crosshair');
 
   /** The crosshair carries the weapon state: spread, locked-out, scoped. */
@@ -153,6 +163,6 @@ export function createHud(root, post) {
   }
 
   const togglePanel = () => panel.classList.toggle('hidden');
-  return { update, setLabels, updateLabels, togglePanel, updateCrosshair,
+  return { update, setLabels, updateLabels, togglePanel, updateCrosshair, setMap,
            hideHint: () => root.querySelector('#hint').classList.add('gone') };
 }

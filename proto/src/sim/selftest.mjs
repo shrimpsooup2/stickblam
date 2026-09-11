@@ -5,6 +5,9 @@ import { makePlayer, stepPlayer, hurtDepth, canShoot } from './player.js';
 
 const NONE = { fwd:0, right:0, jump:false, crouch:false, edge:false, glide:false, scoped:false };
 const inp = (o={}) => ({ ...NONE, ...o });
+// World +x is screen-LEFT (camera right = cross(forward, up) = -x at yaw 0), so
+// tests that want to travel toward +x drive the strafe stick left.
+const toPlusX = { right: -1 };
 let pass = 0, fail = 0;
 const ok = (name, cond, detail='') => {
   if (cond) { pass++; console.log('  PASS  ' + name + (detail ? '   ' + detail : '')); }
@@ -64,18 +67,18 @@ console.log('\n--- coyote time & jump buffer ---');
   const p = makePlayer(0, 0, 0);
   let left = false;
   for (let i = 0; i < 2000; i++) {              // walk until the ground goes
-    stepPlayer(p, inp({ right: 1 }), w, TICK);
+    stepPlayer(p, inp(toPlusX), w, TICK);
     if (!p.grounded) { left = true; break; }
   }
   ok('left the ledge', left);
-  stepPlayer(p, inp({ right: 1, jump: true }), w, TICK);
+  stepPlayer(p, inp({ ...toPlusX, jump: true }), w, TICK);
   ok('coyote jump fires just after leaving ground', p.vel.y > 5,
      'vy=' + p.vel.y.toFixed(2));
   const late = makePlayer(0, 0, 0);
-  for (let i = 0; i < 2000; i++) { stepPlayer(late, inp({ right: 1 }), w, TICK); if (!late.grounded) break; }
-  run(late, w, inp({ right: 1 }), T.coyoteTime + 0.05);
+  for (let i = 0; i < 2000; i++) { stepPlayer(late, inp(toPlusX), w, TICK); if (!late.grounded) break; }
+  run(late, w, inp(toPlusX), T.coyoteTime + 0.05);
   const vBefore = late.vel.y;
-  stepPlayer(late, inp({ right: 1, jump: true }), w, TICK);
+  stepPlayer(late, inp({ ...toPlusX, jump: true }), w, TICK);
   ok('coyote window does expire', late.vel.y < vBefore,
      'vy=' + late.vel.y.toFixed(2) + ' (no launch)');
   // Glide is a separate, gated toggle now -- jump does not deploy it.
@@ -99,13 +102,13 @@ console.log('\n--- step up ---');
   addBox(w, 3, 0.15, 0, 2, 0.3, 4, 'curb');      // 0.30m, under stepHeight
   const p = makePlayer(0, 0, 0);
   let peak = 0;
-  for (let i = 0; i < 240; i++) { stepPlayer(p, inp({ right: 1 }), w, TICK); peak = Math.max(peak, p.pos.y); }
+  for (let i = 0; i < 240; i++) { stepPlayer(p, inp(toPlusX), w, TICK); peak = Math.max(peak, p.pos.y); }
   ok('climbs a 0.30m curb', peak > 0.25, 'peak y=' + peak.toFixed(3));
 
   const w2 = flatWorld();
   addBox(w2, 3, 0.5, 0, 2, 1.0, 4, 'wall');      // 1.0m, over stepHeight
   const q = makePlayer(0, 0, 0);
-  run(q, w2, inp({ right: 1 }), 2.0);
+  run(q, w2, inp(toPlusX), 2.0);
   ok('blocked by a 1.0m wall', q.pos.y < 0.05 && q.pos.x < 2.0,
      'x=' + q.pos.x.toFixed(2) + ' y=' + q.pos.y.toFixed(2));
 }
@@ -116,7 +119,7 @@ console.log('\n--- no tunnelling at speed ---');
   addBox(w, 20, 2, 0, 0.5, 4, 20, 'thin wall');
   const p = makePlayer(0, 0, 0);
   p.vel.x = 60;                                   // far above any legal speed
-  run(p, w, inp({ right: 1 }), 2.0);
+  run(p, w, inp(toPlusX), 2.0);
   ok('does not pass through a thin wall at 60 m/s', p.pos.x < 20,
      'x=' + p.pos.x.toFixed(2));
 }
@@ -239,12 +242,12 @@ console.log('\n--- crumple tunnel clearance ---');
   const w = flatWorld();
   addBox(w, 17, 2.1, 0, 6, 2.0, 6, 'low ceiling');
   const p = makePlayer(0, 0, 0);
-  run(p, w, inp({ right: 1 }), 1.2);
-  run(p, w, inp({ right: 1, crouch: true }), 2.5);
+  run(p, w, inp(toPlusX), 1.2);
+  run(p, w, inp({ ...toPlusX, crouch: true }), 2.5);
   ok('rolls under a 1.1m ceiling', p.pos.x > 20, 'x=' + p.pos.x.toFixed(2));
   ok('cannot stand up until clear', p.crumpled === true || p.pos.x > 20);
   const q = makePlayer(0, 0, 0);
-  run(q, w, inp({ right: 1 }), 4.0);
+  run(q, w, inp(toPlusX), 4.0);
   ok('standing is blocked by the same tunnel', q.pos.x < 14.1, 'x=' + q.pos.x.toFixed(2));
 }
 

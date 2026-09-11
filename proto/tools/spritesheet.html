@@ -1,0 +1,96 @@
+<title>Stickblam Sprite Sheet Template</title>
+<style>
+  body{margin:0;background:#EDEEE8;font:13px "IBM Plex Mono",ui-monospace,monospace;color:#16181F}
+  #bar{position:fixed;top:0;left:0;right:0;padding:8px 14px;background:rgba(237,238,232,.95);
+       border-bottom:1px solid #C9CCC3;display:flex;gap:14px;align-items:center;z-index:9}
+  #bar a,#bar button{font:inherit;padding:5px 10px;border:1px solid #C9CCC3;background:transparent;
+       color:#4A4F59;cursor:pointer;text-decoration:none}
+  #bar b{font-family:"Permanent Marker",cursive;font-size:16px}
+  canvas{display:block;margin:52px auto 40px;box-shadow:0 1px 0 #C9CCC3}
+</style>
+<div id="bar">
+  <b>Sprite sheet template</b>
+  <span id="dims"></span>
+  <label><input type="checkbox" id="ghost" checked> ghost</label>
+  <label><input type="checkbox" id="guides" checked> guides</label>
+  <label>scale <select id="scale"><option>1</option><option selected>2</option><option>3</option></select></label>
+  <a id="dl" download="stickblam-spritesheet-template.png">download PNG</a>
+</div>
+<canvas id="c"></canvas>
+<script type="module">
+import { POSES, VARIANTS, COLS, CELL_W, CELL_H, SHEET_W, SHEET_H, poseGuide } from '../src/gfx/sprites.js';
+
+const c = document.getElementById('c'), x = c.getContext('2d');
+const $ = (id) => document.getElementById(id);
+
+function draw() {
+  const S = +$('scale').value;
+  c.width = SHEET_W * S; c.height = SHEET_H * S;
+  c.style.width = c.width + 'px';
+  $('dims').textContent = `${c.width} x ${c.height}  ·  cell ${CELL_W*S} x ${CELL_H*S}  ·  ${COLS} cols`;
+
+  x.setTransform(S, 0, 0, S, 0, 0);
+  x.fillStyle = '#fff'; x.fillRect(0, 0, SHEET_W, SHEET_H);
+
+  let i = 0;
+  for (const name of POSES) {
+    for (let v = 0; v < VARIANTS; v++, i++) {
+      const cx = (i % COLS) * CELL_W, cy = Math.floor(i / COLS) * CELL_H;
+      x.save(); x.translate(cx, cy);
+      x.beginPath(); x.rect(0, 0, CELL_W, CELL_H); x.save(); x.clip();
+
+      const g = poseGuide(name, i * 7919 + 13);
+
+      if ($('guides').checked) {
+        // feet line -- the figure stands on this
+        x.strokeStyle = '#BE4F47'; x.lineWidth = 1;
+        x.beginPath(); x.moveTo(0, CELL_H * 0.94); x.lineTo(CELL_W, CELL_H * 0.94); x.stroke();
+        // centre line
+        x.strokeStyle = 'rgba(190,79,71,.30)';
+        x.beginPath(); x.moveTo(CELL_W / 2, 0); x.lineTo(CELL_W / 2, CELL_H); x.stroke();
+        // head box -- ~27% of height, wider than tall
+        x.strokeStyle = 'rgba(70,110,190,.75)'; x.setLineDash([4, 3]);
+        x.strokeRect(g.head.x - g.head.rx, g.head.y - g.head.ry, g.head.rx * 2, g.head.ry * 2);
+        x.setLineDash([]);
+        // the node: arms + spine + head all meet here
+        x.strokeStyle = '#BE4F47'; x.lineWidth = 1.4;
+        x.beginPath();
+        x.moveTo(g.node.x - 5, g.node.y); x.lineTo(g.node.x + 5, g.node.y);
+        x.moveTo(g.node.x, g.node.y - 5); x.lineTo(g.node.x, g.node.y + 5);
+        x.stroke();
+        // safe bounds for this pose
+        x.strokeStyle = 'rgba(70,110,190,.28)'; x.lineWidth = 1;
+        x.strokeRect(g.bbox.minx, g.bbox.miny, g.bbox.maxx - g.bbox.minx, g.bbox.maxy - g.bbox.miny);
+      }
+
+      if ($('ghost').checked) {
+        x.strokeStyle = 'rgba(22,24,31,.22)';
+        x.lineWidth = 3.2; x.lineCap = 'round'; x.lineJoin = 'round';
+        for (const st of g.strokes) {
+          x.beginPath();
+          st.forEach((p, k) => k ? x.lineTo(p.x, p.y) : x.moveTo(p.x, p.y));
+          x.stroke();
+        }
+        x.beginPath();
+        x.ellipse(g.head.x, g.head.y, g.head.rx, g.head.ry, 0, 0, 6.2832);
+        x.stroke();
+      }
+
+      x.restore();
+      // label + cell border, drawn outside the clip
+      x.fillStyle = '#4A4F59';
+      x.font = '9px ui-monospace, monospace';
+      x.fillText(`${name} ${v + 1}`, 5, 12);
+      x.fillStyle = 'rgba(74,79,89,.45)';
+      x.fillText(`#${i}`, CELL_W - 20, 12);
+      x.strokeStyle = '#BE4F47'; x.lineWidth = 1;
+      x.strokeRect(0.5, 0.5, CELL_W - 1, CELL_H - 1);
+      x.restore();
+    }
+  }
+  $('dl').href = c.toDataURL('image/png');
+}
+for (const id of ['ghost', 'guides', 'scale']) $(id).addEventListener('input', draw);
+draw();
+window.__sheetReady = true;
+</script>

@@ -42,6 +42,18 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--paper);color:var
 .rgrid span{color:var(--ink-3)}
 .rgrid em{font-style:normal;text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
 
+/* ---- map card ---- */
+#mapcard{position:absolute;left:14px;bottom:18px;max-width:290px;
+  background:rgba(237,238,232,.88);border:1px solid var(--edge);border-left:3px solid var(--margin);
+  padding:9px 12px;line-height:1.4}
+#mapcard b{font-family:var(--f-disp);font-size:17px;display:block;font-weight:400}
+#mapcard em{font-style:normal;font-size:10px;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--margin);display:block;margin:1px 0 5px}
+#mapcard span{display:block;font-size:11.5px;color:var(--ink-2);font-family:var(--f-sans)}
+#mapcard i{display:block;font-style:normal;font-size:10px;color:var(--ink-3);margin-top:5px}
+#mapcard.fade{animation:mapin .5s ease}
+@keyframes mapin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
 /* ---- world labels: written in the margin, slightly crooked ---- */
 .wlabel{position:absolute;left:0;top:0;white-space:nowrap;font-family:var(--f-mono);
   font-size:11px;letter-spacing:.06em;color:var(--ink-2);text-transform:uppercase;

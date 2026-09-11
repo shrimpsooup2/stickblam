@@ -10,6 +10,7 @@ export const BINDINGS = [
   ['Right mouse', 'scope'],
   ['Left mouse', 'fire'],
   ['V', 'first / third person'],
+  ['M', 'next map'],
   ['R', 'respawn'],
   ['H', 'show / hide panel'],
 ];
@@ -20,7 +21,7 @@ export function createInput(canvas) {
     fwd: 0, right: 0, jump: false, crouch: false, edge: false, glide: false,
     scoped: false, dx: 0, dy: 0, locked: false, shoot: false,
   };
-  const once = { view: false, respawn: false, panel: false };
+  const once = { view: false, respawn: false, panel: false, map: false };
 
   const down = (e) => {
     if (e.repeat) return;
@@ -28,6 +29,7 @@ export function createInput(canvas) {
     if (e.code === 'KeyV') once.view = true;
     if (e.code === 'KeyR') once.respawn = true;
     if (e.code === 'KeyH') once.panel = true;
+    if (e.code === 'KeyM') once.map = true;
     if (['Space', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'Tab'].includes(e.code)) e.preventDefault();
   };
   const up = (e) => keys.delete(e.code);

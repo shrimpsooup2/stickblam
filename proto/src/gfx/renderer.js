@@ -88,6 +88,20 @@ export function createRenderer(canvas) {
   const vm = makeViewmodel();
   let lastBoil = -1;
 
+  // If a hand-drawn sheet is sitting next to the page, it wins. Same grid, any
+  // resolution -- the UVs are fractional. Drop a drawn-over copy of the template
+  // in as sprites.png and the procedural generator stops running.
+  let handDrawn = null;
+  const sheet = new Image();
+  sheet.onload = () => {
+    handDrawn = sheet;
+    gl.bindTexture(gl.TEXTURE_2D, atlasTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, sheet);
+    gl.generateMipmap(gl.TEXTURE_2D);
+  };
+  sheet.onerror = () => {};
+  sheet.src = 'sprites.png';
+
   const gunTex = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, gunTex);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, vm.canvas);
@@ -129,12 +143,17 @@ export function createRenderer(canvas) {
     // regenerations + uploads per second, not 60 -- so the linework is never the
     // same twice and it still costs almost nothing.
     const boil = Math.floor(post.time * BOIL_FPS);
-    if (boil !== lastBoil) {
+    if (boil !== lastBoil && !handDrawn) {
       lastBoil = boil;
       atlas.redraw(boil);
       gl.bindTexture(gl.TEXTURE_2D, atlasTex);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, atlas.canvas);
       gl.generateMipmap(gl.TEXTURE_2D);
+      vm.redraw(boil);
+      gl.bindTexture(gl.TEXTURE_2D, gunTex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, vm.canvas);
+    } else if (boil !== lastBoil) {
+      lastBoil = boil;
       vm.redraw(boil);
       gl.bindTexture(gl.TEXTURE_2D, gunTex);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, vm.canvas);
@@ -253,5 +272,5 @@ export function createRenderer(canvas) {
       dist: Math.hypot(x - lastCam.x, y - lastCam.y, z - lastCam.z),
     };
   }
-  return { gl, resize, render, atlas, project, get size() { return { W, H }; } };
+  return { gl, resize, render, atlas, project, get handDrawn() { return !!handDrawn; }, get size() { return { W, H }; } };
 }

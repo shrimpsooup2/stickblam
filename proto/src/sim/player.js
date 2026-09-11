@@ -132,9 +132,12 @@ export function stepPlayer(p, input, world, dt) {
   p.height = approach(p.height, targetHeight, 6.0, dt);
 
   // ---------------- wish direction ----------------
+  // forward = (-sin, 0, cos); camera right = cross(forward, up) = (-cos, 0, -sin).
+  // The right term used to be the negation of that, so strafing was mirrored
+  // while forward/back was fine.
   const sy = Math.sin(p.yaw), cy = Math.cos(p.yaw);
-  let wx = input.right * cy - input.fwd * sy;
-  let wz = input.right * sy + input.fwd * cy;
+  let wx = -input.right * cy - input.fwd * sy;
+  let wz = -input.right * sy + input.fwd * cy;
   const wl = Math.hypot(wx, wz);
   const wishing = wl > 1e-5;
   if (wishing) { wx /= wl; wz /= wl; } else { wx = 0; wz = 0; }
@@ -201,7 +204,7 @@ export function stepPlayer(p, input, world, dt) {
 
   // ---------------- facing, flip, roll ----------------
   if (wishing && !p.crumpled) {
-    const want = (wx * cy - wz * sy) >= 0 ? 1 : -1;
+    const want = -(wx * cy + wz * sy) >= 0 ? 1 : -1;
     if (want !== p.facing) { p.facing = want; p.flipT = 0; }
   }
   p.flipT = Math.min(1, p.flipT + dt * 9);
