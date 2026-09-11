@@ -171,9 +171,12 @@ generating the matrix rather than hand-authoring one.
    `CHAOS`, which are exactly the tags that feed most triples. Either accept it as a
    deliberately simple precision weapon, or add a Masterpiece built from
    precision-flavoured tags.
-3. **22 Combos may be too many to learn.** [PARTS.md §7](PARTS.md) caps the shipped
-   list for legibility. The matrix says they're all reachable; it says nothing about
-   whether anyone can remember them.
+3. **The content targets were wrong, in both directions.** 22 Combos is far too
+   thin as a *library* and already too frequent as a *rate* — 64.3% of legal builds
+   produce a named interaction. [PARTS.md §10](PARTS.md#10-how-much-content-can-this-hold)
+   works through the arithmetic and lands on ~200 Combos, ~60 Bleeds and ~131
+   Masterpieces, with the 1-in-6 rarity target applied to Masterpieces only.
+   Regenerate with `python3 tools/rule_space.py`.
 4. **The matrix models Generation-1 cards only.** Degraded photocopies add `CHAOS`
    to any part ([PARTS.md §5](PARTS.md)), which opens combinations this space
    doesn't contain — including `Masterpiece` (Chaos ×3) on weapons that otherwise

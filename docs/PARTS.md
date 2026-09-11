@@ -234,7 +234,11 @@ not a prize you pick up.
 
 ## 6. The tables
 
-### 6.1 Combos (pairs) — target ~24 shipped
+### 6.1 Combos (pairs) — target ~200 shipped
+
+> **Target raised from 24.** See [§10](#10-how-much-content-can-this-hold) — 24 was
+> far too thin for a shipping game, but 200 Combos changes what a Combo *is*.
+> The 20 below are the dramatic ones; most of the other 180 should be small.
 
 | Tags | Name | Effect |
 | --- | --- | --- |
@@ -262,7 +266,7 @@ not a prize you pick up.
 *Four slots reserved for playtest discoveries. Don't fill them from a spreadsheet
 — fill them from things players actually tried.*
 
-### 6.2 Bleeds — the funny failures
+### 6.2 Bleeds — target ~60 shipped
 
 | Tags | Name | What goes wrong |
 | --- | --- | --- |
@@ -277,8 +281,13 @@ not a prize you pick up.
 
 Bleeds are **funny first, punishing second.** Keep penalties shallow (20–30%) and
 the side effect loud. A player who makes a Bleed should laugh, not rage-quit.
+They can afford to be common — that's what makes them jokes rather than traps.
 
-### 6.3 Masterpieces — target ~8 shipped
+### 6.3 Masterpieces — target ~131 shipped
+
+> **Target raised from 8.** This is where rarity actually belongs: 131 triple-rules
+> gives exactly the 1-in-6 density we want, because a build contains only *one*
+> triple but *three* pairs. See [§10](#10-how-much-content-can-this-hold).
 
 | Tags | Name | Effect |
 | --- | --- | --- |
@@ -365,3 +374,106 @@ collection.
    the doc, most likely to feel like the game cheating. Prototype on the Marker
    shotgun only.
 6. **Are 14 tags too many or too few?** Expect to cut to 11.
+
+---
+
+## 10. How much content can this hold?
+
+Run `python3 tools/rule_space.py` to regenerate everything below.
+
+### "How many combos do we have" has two answers
+
+| | Authored rules | Builds that produce one |
+| --- | --- | --- |
+| Combos | 22 | **1,348** |
+| Bleeds | 6 | **198** |
+| Masterpieces | 10 | **85** |
+
+Because rules are keyed on tags rather than part IDs, **one authored rule covers
+about 41 build-cells.** So 22 Combos is thin as a *content library* and already
+generous as a *frequency*: 64.3% of legal builds currently produce a named
+interaction — 1 in 1.6.
+
+Both facts are true at once, and they pull in opposite directions. Wanting more
+variety and wanting results to feel special are different requests with different
+fixes.
+
+### The hard ceiling on pair rules
+
+13 interactive tags give **91 possible pairs**. That is an absolute cap: you cannot
+author 200 pair-rules on 13 tags, no matter how many parts exist. Options:
+
+| Route | Pair-rules it allows |
+| --- | --- |
+| 13 tags *(today)* | 91 |
+| 20 tags | 210 |
+| 23 tags | 276 |
+| 13 tags + `medium × tag` keys | 91 + 117 = 208 |
+| 13 tags + `medium × tag` + `medium × medium` | 253 |
+
+The medium-keyed routes are worth serious consideration on flavour alone —
+*Charcoal + `SPLIT`* producing something different from *Pencil + `SPLIT`* is very
+on-theme, and it's free rule-space that needs no new tags.
+
+### Why 200 pair-Combos cannot be rare
+
+A 3-slot build contains **three part-pairs**, so density climbs as roughly
+`1 − (1 − f)³` where `f` is the share of pair-occurrences carrying a rule.
+
+For 1-in-6 density, `f` must be about 5.9%. With 260 pair-rules that needs a key
+space of ~4,400 — roughly **94 tags.** Not reachable, and not desirable.
+
+Measured, authoring rarest-first:
+
+| Pair-rules | Density | Rarity |
+| --- | --- | --- |
+| 16 | 17.3% | 1 in 5.8 |
+| 28 *(today)* | 33.6% | 1 in 3.0 |
+| 60 | 67.8% | 1 in 1.5 |
+| 91 *(all of them)* | 91.8% | 1 in 1.1 |
+
+**So: a large Combo library and rare Combos are mathematically incompatible.**
+
+### Triples are where rarity lives
+
+A build contains three pairs but only **one** triple, and the triple key space is
+far bigger — 455 on 13 tags, of which 469 variants actually occur once Marker
+slot-bleed is counted.
+
+| Triple-rules | Density | Rarity |
+| --- | --- | --- |
+| 10 *(today)* | 5.3% | 1 in 19 |
+| 60 | 5.1% | 1 in 19.5 |
+| **131** | **16.7%** | **1 in 6** |
+| 200 | 31.2% | 1 in 3.2 |
+
+131 Masterpieces lands exactly on 1-in-6 without touching the tag count.
+
+### Revised targets
+
+| Tier | Count | Frequency | What it should be |
+| --- | --- | --- | --- |
+| **Bleed** | ~60 | common | Small, funny failures. Frequency is fine — it's what makes them jokes. |
+| **Combo** | ~200 | common (60–90%) | **Re-scoped: small modifiers, not events.** At 200 they are texture, the layer that makes every build feel slightly its own. |
+| **Masterpiece** | ~131 | **1 in 6** | The dramatic tier. Named, loud, worth chasing. |
+
+~390 authored results in total, which satisfies both the variety goal and the
+1-in-6 goal by **putting the ratio on the top tier instead of on all named
+results.**
+
+The cost is real and worth stating plainly: ~390 pieces of written content is a
+serious authoring project, even though the tag-keyed structure means 390 rules
+rather than 390 × parts entries. Budget for it, and ship in tiers — the dramatic
+20 Combos and 10 Masterpieces below are enough to prototype with.
+
+### What this changes
+
+1. **"Fourteen tags, hold this line" is overturned.** Go to ~20 interactive tags.
+   The thing to hold is **tags per part** (1–2) — that, not the tag count, is what
+   drives how often rules fire.
+2. **A Combo is no longer an event.** At 200 of them, most must be small. The
+   existing dramatic entries (Flock, Redaction, Cat's Cradle) become the top of
+   the Combo tier or graduate to Masterpieces.
+3. **Author rarest-first.** Rule frequency varies 20× across tag pairs
+   (`AOE + PHYSICAL` occurs in 302 builds, `PIERCE + PIERCE` in 15). Authoring the
+   obvious common pairs first is what produces combo soup.
