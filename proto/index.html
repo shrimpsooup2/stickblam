@@ -1,0 +1,81 @@
+<title>Stickblam Movement Testbed</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Permanent+Marker&display=swap">
+<style>
+:root{
+  --paper:#EDEEE8; --ink:#16181F; --ink-2:#4A4F59; --ink-3:#878D97;
+  --edge:#C9CCC3; --margin:#BE4F47;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --f-sans:"IBM Plex Sans",system-ui,sans-serif;
+  --f-disp:"Permanent Marker","Comic Sans MS",cursive;
+  color-scheme: light;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--paper);color:var(--ink);font-family:var(--f-sans)}
+#view{position:fixed;inset:0;width:100%;height:100%;display:block;cursor:crosshair;background:var(--paper)}
+#hud{position:fixed;inset:0;pointer-events:none;font-family:var(--f-mono);font-size:12px}
+#hud button,#hud input{pointer-events:auto}
+
+/* ---- crosshair: a small hand-drawn cross, off-centre because nothing is exact ---- */
+#crosshair{position:absolute;left:50%;top:50%;width:22px;height:22px;transform:translate(-50%,-50%) rotate(-3deg)}
+#crosshair::before,#crosshair::after{content:"";position:absolute;background:var(--ink);opacity:.8}
+#crosshair::before{left:50%;top:2px;width:1.5px;height:18px;transform:translateX(-50%) rotate(1.5deg)}
+#crosshair::after{top:50%;left:1px;height:1.5px;width:19px;transform:translateY(-50%) rotate(-1deg)}
+
+/* ---- readout ---- */
+#readout{position:absolute;left:14px;top:14px;background:rgba(237,238,232,.82);
+  border:1px solid var(--edge);padding:9px 11px;min-width:186px;backdrop-filter:blur(2px)}
+.rrow{font-weight:600;font-size:13px;margin-bottom:6px;color:var(--ink)}
+.rgrid{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:11px}
+.rgrid span{color:var(--ink-3)}
+.rgrid em{font-style:normal;text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
+
+/* ---- world labels: written in the margin, slightly crooked ---- */
+.wlabel{position:absolute;left:0;top:0;white-space:nowrap;font-family:var(--f-mono);
+  font-size:11px;letter-spacing:.06em;color:var(--ink-2);text-transform:uppercase;
+  transform-origin:center;pointer-events:none;text-shadow:0 0 3px var(--paper),0 0 6px var(--paper)}
+.wlabel.station{font-family:var(--f-disp);font-size:17px;letter-spacing:0;color:var(--ink);text-transform:none}
+.wlabel.home{font-family:var(--f-disp);font-size:14px;color:var(--margin);text-transform:none}
+.wlabel.note{color:var(--margin);font-size:10.5px}
+
+/* ---- panel ---- */
+#panel{position:absolute;right:0;top:0;bottom:0;width:308px;overflow-y:auto;
+  background:rgba(237,238,232,.94);border-left:1px solid var(--edge);
+  padding:12px 14px 30px;pointer-events:auto;transition:transform .16s ease}
+#panel.hidden{transform:translateX(100%)}
+.phead{font-family:var(--f-disp);font-size:19px;margin-bottom:2px}
+.phead span{font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--ink-3);display:block;margin-top:1px}
+.kb{display:grid;grid-template-columns:112px 1fr;gap:6px;font-size:10.5px;
+  color:var(--ink-2);padding:2px 0;line-height:1.35}
+.kb kbd{font-family:var(--f-mono);background:transparent;border:1px solid var(--edge);
+  padding:1px 4px;text-align:center;color:var(--ink);font-size:10px}
+#keys{margin:10px 0 4px;padding-bottom:8px;border-bottom:1px solid var(--edge)}
+.sgroup{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--margin);
+  margin:13px 0 5px;font-weight:600}
+.srow{display:grid;grid-template-columns:96px 1fr 44px;gap:6px;align-items:center;
+  font-size:10.5px;padding:1.5px 0}
+.sname{color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.srow output{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
+.srow input[type=range]{width:100%;height:14px;accent-color:var(--margin);background:transparent}
+.prow{display:flex;gap:6px;margin-top:16px}
+#panel button{font-family:var(--f-mono);font-size:10.5px;padding:5px 9px;cursor:pointer;
+  background:transparent;border:1px solid var(--edge);color:var(--ink-2)}
+#panel button:hover{border-color:var(--margin);color:var(--margin)}
+#copied{font-size:10px;color:var(--margin);margin-top:7px;height:12px}
+
+#hint{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);
+  font-size:11.5px;color:var(--ink-2);background:rgba(237,238,232,.86);
+  border:1px solid var(--edge);padding:6px 12px;letter-spacing:.03em;transition:opacity .4s}
+#hint.gone{opacity:0}
+#fatal{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;font-family:var(--f-sans);gap:6px;padding:24px;text-align:center}
+#fatal b{font-family:var(--f-disp);font-size:22px}
+#fatal p{max-width:46ch;color:var(--ink-2);font-size:14px;line-height:1.5}
+@media (max-width:700px){#panel{width:100%}.kb{grid-template-columns:96px 1fr}}
+</style>
+
+<canvas id="view"></canvas>
+<div id="hud"></div>
+<script type="module" src="src/main.js"></script>
