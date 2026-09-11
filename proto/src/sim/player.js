@@ -1,10 +1,10 @@
 import { T, STANCE } from './constants.js';
 import { v3, clamp, approach } from './vec3.js';
-import { moveAndCollide, probeWall, anyOverlap } from './aabb.js';
+import { moveAndCollide, anyOverlap } from './aabb.js';
+import { groundClearance } from './world.js';
 
 // Quake-family acceleration: you only gain speed in the wish direction up to
-// wishSpeed, which is what makes air control (and strafe-jumping) fall out for
-// free rather than needing a special case.
+// wishSpeed, which is what makes air control fall out for free.
 function accelerate(vel, wx, wz, wishSpeed, accel, dt) {
   const current = vel.x * wx + vel.z * wz;
   const add = wishSpeed - current;
@@ -19,9 +19,8 @@ function applyFriction(vel, friction, stopSpeed, dt) {
   if (speed < 1e-4) { vel.x = 0; vel.z = 0; return; }
   const control = Math.max(speed, stopSpeed);
   const drop = control * friction * dt;
-  const newSpeed = Math.max(0, speed - drop) / speed;
-  vel.x *= newSpeed;
-  vel.z *= newSpeed;
+  const s = Math.max(0, speed - drop) / speed;
+  vel.x *= s; vel.z *= s;
 }
 
 export function makePlayer(x = 0, y = 0, z = 0) {
@@ -32,166 +31,182 @@ export function makePlayer(x = 0, y = 0, z = 0) {
 
     grounded: false,
     stance: STANCE.NORMAL,
-    thin: 0,             // 0 = full width, 1 = fully edge-on
+
+    thin: 0,            // 0 = square on, 1 = fully edge-on (90 degrees)
+    edgeHeld: false,
+    shootLock: 0,       // seconds until the weapon works again
+
     gliding: false,
-    crumpled: false,
-    flattenTime: 0,
-    wallNormal: null,
+    recover: 0,         // seconds left lying flat after a glide landing
+    clearance: 0,       // metres of air below the feet
+
+    ball: false,
+    roll: 0,            // accumulated roll angle, for the sprite
 
     coyote: 0,
     buffered: 0,
     lastJumpHeld: false,
+    lastGlideHeld: false,
 
     height: T.height,
-    facing: 1,           // +1 / -1, the sprite flip
-    flipT: 1,            // 1 = settled, 0 = mid-flip (render squashes on this)
+    facing: 1,
+    flipT: 1,
 
-    // stats the HUD reads
-    speed: 0, apex: 0, groundedTime: 0, airTime: 0,
+    speed: 0, apex: 0,
   };
 }
 
+/** Can the weapon fire right now? Gliding and rolling are both fine -- that is the point. */
+export function canShoot(p) {
+  return p.shootLock <= 0 && p.stance !== STANCE.EDGE_ON && p.stance !== STANCE.RECOVER;
+}
+
+/** Hurtbox depth. This is what turning sideways actually buys you. */
+export function hurtDepth(p) {
+  return T.normalDepth + (T.edgeDepth - T.normalDepth) * p.thin;
+}
+
 /**
- * One fixed sim tick.
- * `input` is { fwd, right, jump, crouch, edge, flatten } — all engine-agnostic,
- * so this module has no idea a keyboard or a browser exists.
+ * One fixed sim tick. `input` is engine-agnostic:
+ * { fwd, right, jump, crouch, edge, glide }
  */
 export function stepPlayer(p, input, world, dt) {
   const solids = world.solids;
+  const wasGrounded = p.grounded;
+  p.shootLock = Math.max(0, p.shootLock - dt);
+  p.clearance = groundClearance(world, p.pos.x, p.pos.y, p.pos.z);
 
-  // ---------- stance resolution ----------
-  const wantEdge = input.edge && !p.crumpled;
-  const wall = input.flatten ? probeWall(p.pos, T.halfWidth, p.height, T.flattenReach, solids) : null;
-  const canFlatten = !!wall && (T.flattenMaxTime <= 0 || p.flattenTime < T.flattenMaxTime);
-
-  if (canFlatten) {
-    p.stance = STANCE.FLATTEN;
-    p.wallNormal = wall;
-    p.flattenTime += dt;
-  } else {
-    if (p.stance === STANCE.FLATTEN) p.wallNormal = null;
-    if (!input.flatten) p.flattenTime = Math.max(0, p.flattenTime - dt * 2);
-    p.stance = p.crumpled ? STANCE.CRUMPLE : (wantEdge ? STANCE.EDGE_ON : STANCE.NORMAL);
+  // ---------------- recovery: flat on the page, getting up ----------------
+  if (p.recover > 0) {
+    p.recover -= dt;
+    p.stance = STANCE.RECOVER;
+    applyFriction(p.vel, T.friction * 2.2, T.stopSpeed, dt);
+    p.vel.y -= T.gravity * dt;
+    p.height = approach(p.height, T.height * 0.30, 7, dt);
+    p.thin = approach(p.thin, 0, 1 / T.edgeExitTime, dt);
+    const r0 = moveAndCollide(p.pos, p.vel, T.halfWidth, p.height, dt, solids, 0, wasGrounded);
+    p.grounded = r0.grounded;
+    p.speed = Math.hypot(p.vel.x, p.vel.z);
+    if (p.recover <= 0) p.stance = STANCE.NORMAL;
+    return r0;
   }
 
-  // Edge-On is a continuous rotation, not a toggle: the sliver arrives over
-  // edgeEnterTime so it reads as a commitment rather than a twitch.
-  const thinTarget = (p.stance === STANCE.EDGE_ON) ? 1 : (p.stance === STANCE.FLATTEN ? 1 : 0);
-  p.thin = approach(p.thin, thinTarget, 1 / Math.max(T.edgeEnterTime, 1e-3), dt);
+  // ---------------- ball ----------------
+  // Hold crouch and you are a ball. No speed gate: it is a stance, not a trick.
+  const wantBall = input.crouch && !p.gliding;
+  if (wantBall && !p.ball) {
+    p.ball = true;
+    const s = Math.hypot(p.vel.x, p.vel.z);
+    if (s > 0.5) { const k = (s + T.ballEnterBoost) / s; p.vel.x *= k; p.vel.z *= k; }
+  } else if (!wantBall && p.ball) {
+    // only stand up if there is headroom
+    if (!anyOverlap(p.pos, T.halfWidth, T.height, solids)) p.ball = false;
+  }
 
-  // ---------- crumple entry / exit ----------
-  const speedXZ = Math.hypot(p.vel.x, p.vel.z);
-  if (!p.crumpled && input.crouch && p.grounded && speedXZ >= T.crumpleEnterSpeed &&
-      p.stance !== STANCE.FLATTEN) {
-    p.crumpled = true;
-    const s = Math.max(speedXZ, 1e-4);
-    const boosted = Math.min(speedXZ + T.crumpleBoost, T.crumpleMaxSpeed);
-    p.vel.x *= boosted / s; p.vel.z *= boosted / s;
+  // ---------------- edge-on ----------------
+  // Held: snap to 90 degrees. Released: come back slowly, and no shooting for a
+  // second. Tapping it is not free.
+  const wantEdge = input.edge && !p.ball && !p.gliding;
+  if (p.edgeHeld && !wantEdge) p.shootLock = Math.max(p.shootLock, T.edgeShootLock);
+  p.edgeHeld = wantEdge;
+  const rate = wantEdge ? 1 / T.edgeEnterTime : 1 / T.edgeExitTime;
+  p.thin = approach(p.thin, wantEdge ? 1 : 0, rate, dt);
+
+  // ---------------- glide deploy ----------------
+  const glidePressed = input.glide && !p.lastGlideHeld;
+  p.lastGlideHeld = input.glide;
+  if (glidePressed && !p.grounded && !p.gliding && !p.ball &&
+      p.clearance >= T.glideMinClearance) {
+    p.gliding = true;
+    p.vel.y = Math.max(p.vel.y, -T.glideFallSpeed);
   }
-  if (p.crumpled) {
-    const tooSlow = speedXZ < T.crumpleExitSpeed;
-    if ((!input.crouch || tooSlow)) {
-      // only stand up if there is headroom
-      const probe = { x: p.pos.x, y: p.pos.y, z: p.pos.z };
-      if (!anyOverlap(probe, T.halfWidth, T.height, solids)) p.crumpled = false;
-    }
-  }
-  const targetHeight = p.crumpled ? T.height * T.crumpleHeightMult : T.height;
+  // Once open it stays open. There is no cancelling a sheet of paper.
+
+  // ---------------- stance readout ----------------
+  p.stance = p.gliding ? STANCE.GLIDE
+           : p.ball ? STANCE.BALL
+           : (p.thin > 0.02 ? STANCE.EDGE_ON : STANCE.NORMAL);
+
+  const targetHeight = p.ball ? T.height * T.ballHeightMult : T.height;
   p.height = approach(p.height, targetHeight, 6.0, dt);
 
-  // ---------- wish direction, in world space ----------
+  // ---------------- wish direction ----------------
   const sy = Math.sin(p.yaw), cy = Math.cos(p.yaw);
   let wx = input.right * cy - input.fwd * sy;
   let wz = input.right * sy + input.fwd * cy;
   const wl = Math.hypot(wx, wz);
-  if (wl > 1e-5) { wx /= wl; wz /= wl; } else { wx = 0; wz = 0; }
   const wishing = wl > 1e-5;
+  if (wishing) { wx /= wl; wz /= wl; } else { wx = 0; wz = 0; }
 
-  // ---------- jump bookkeeping ----------
+  // ---------------- jump bookkeeping ----------------
   const jumpPressed = input.jump && !p.lastJumpHeld;
   p.lastJumpHeld = input.jump;
   if (jumpPressed) p.buffered = T.jumpBuffer;
   p.buffered = Math.max(0, p.buffered - dt);
   p.coyote = p.grounded ? T.coyoteTime : Math.max(0, p.coyote - dt);
 
-  // ---------- FLATTEN: stuck to the wall, sliding along it ----------
-  if (p.stance === STANCE.FLATTEN && p.wallNormal) {
-    const n = p.wallNormal;
-    // tangent along the wall surface
-    const tx = -n.nz, tz = n.nx;
-    const along = wishing ? (wx * tx + wz * tz) : 0;
-    const target = along * T.maxSpeed * T.flattenSpeed;
-    p.vel.x = approach(p.vel.x, tx * target, 40, dt);
-    p.vel.z = approach(p.vel.z, tz * target, 40, dt);
-    p.vel.y = approach(p.vel.y, 0, 60, dt);        // no gravity while pressed on
-    if (p.buffered > 0) {                          // kick off the wall
-      p.vel.y = T.jumpVel * 0.92;
-      p.vel.x += n.nx * T.maxSpeed * 0.55;
-      p.vel.z += n.nz * T.maxSpeed * 0.55;
-      p.buffered = 0; p.stance = STANCE.NORMAL; p.wallNormal = null;
-    }
+  if (p.gliding) {
+    // ---------------- gliding ----------------
+    // Slow, steerable, and shootable. That is the whole trade: you are a
+    // defenceless slow-moving target with a clear shot.
+    if (wishing) accelerate(p.vel, wx, wz, T.glideMaxSpeed, T.glideAirAccel, dt);
+    else applyFriction(p.vel, 1.1, 0.4, dt);
+    p.vel.y = approach(p.vel.y, -T.glideFallSpeed, 26, dt);
+  } else if (p.grounded) {
+    // ---------------- ground ----------------
+    applyFriction(p.vel, p.ball ? T.ballFriction : T.friction, T.stopSpeed, dt);
+    const maxS = p.ball ? T.ballMaxSpeed
+               : T.maxSpeed * (p.stance === STANCE.EDGE_ON ? T.edgeSpeedMult : 1)
+                            * (input.scoped ? T.scopeSpeedMult : 1);
+    const acc = p.ball ? T.ballAccel : T.accel;
+    if (wishing) accelerate(p.vel, wx, wz, maxS, acc, dt);
   } else {
-    // ---------- GROUND / AIR ----------
-    if (p.grounded) {
-      const fr = p.crumpled ? T.crumpleFriction : T.friction;
-      applyFriction(p.vel, fr, T.stopSpeed, dt);
+    // ---------------- air ----------------
+    if (wishing) accelerate(p.vel, wx, wz, T.airWishSpeed, T.airAccel * T.airControl, dt);
+    p.vel.y -= T.gravity * dt;
+    if (p.vel.y < -T.terminalFall) p.vel.y = -T.terminalFall;
+  }
 
-      let maxS = T.maxSpeed, acc = T.accel;
-      if (p.crumpled)                  { maxS = T.crumpleMaxSpeed; acc = T.crumpleAccel; }
-      else if (p.stance === STANCE.EDGE_ON) { maxS *= T.edgeSpeedMult; }
-      if (wishing) accelerate(p.vel, wx, wz, maxS, acc, dt);
-
-    } else {
-      // Paper Glide: flat things catch air. Only once actually falling, so it
-      // reads as deploying a sheet rather than as a double jump.
-      p.gliding = input.jump && p.vel.y < -T.glideMinFallSpeed && !p.crumpled;
-      const airAcc = T.airAccel * (p.gliding ? T.glideAirControl : 1) * T.airControl;
-      if (wishing) accelerate(p.vel, wx, wz, T.airWishSpeed, airAcc, dt);
-
-      const g = T.gravity * (p.gliding ? T.glideGravityMult : 1);
-      p.vel.y -= g * dt;
-      const floor = p.gliding ? -T.glideMaxFall : -T.terminalFall;
-      if (p.vel.y < floor) p.vel.y = floor;
-    }
-
-    // Jump lives outside the grounded branch on purpose: coyote time only means
-    // anything if you can still jump after the ground has gone.
+  // jump sits outside the branches so coyote time means something
+  if (!p.gliding) {
     const wantJump = p.buffered > 0 || (T.autoHop && input.jump);
     if (wantJump && p.coyote > 0) {
-      p.vel.y = T.jumpVel;
+      p.vel.y = T.jumpVel * (p.ball ? T.ballJumpMult : 1);
       p.grounded = false;
-      p.gliding = false;
-      p.buffered = 0;
-      p.coyote = 0;
+      p.buffered = 0; p.coyote = 0;
       p.apex = p.pos.y;
     }
   }
 
-  // ---------- integrate against the world ----------
-  const wasGrounded = p.grounded;
+  // ---------------- integrate ----------------
+  const fallSpeed = p.vel.y;
   const r = moveAndCollide(p.pos, p.vel, T.halfWidth, p.height, dt, solids,
-                           p.crumpled ? T.stepHeight * 0.5 : T.stepHeight, wasGrounded);
+                           p.ball ? T.stepHeight * 0.5 : T.stepHeight, wasGrounded);
   p.grounded = r.grounded;
-  if (p.grounded) { p.gliding = false; p.coyote = T.coyoteTime; }
-  if (p.stance === STANCE.FLATTEN) p.grounded = false;
 
-  // ---------- facing / flip ----------
-  if (wishing) {
-    const want = (wx * cy - wz * sy) >= 0 ? 1 : -1;   // sidedness relative to view
+  if (p.grounded) {
+    p.coyote = T.coyoteTime;
+    if (p.gliding) {
+      // A glide always ends the same way: flat on your face.
+      p.gliding = false;
+      p.recover = T.glideRecoverTime;
+      p.stance = STANCE.RECOVER;
+      p.vel.x *= 0.25; p.vel.z *= 0.25;
+    } else if (p.ball && fallSpeed < -4) {
+      p.vel.y = -fallSpeed * T.ballBounce;    // a ball bounces
+      p.grounded = false;
+    }
+  }
+
+  // ---------------- facing, flip, roll ----------------
+  if (wishing && !p.ball) {
+    const want = (wx * cy - wz * sy) >= 0 ? 1 : -1;
     if (want !== p.facing) { p.facing = want; p.flipT = 0; }
   }
-  p.flipT = Math.min(1, p.flipT + dt * 9);   // ~0.11s card flip
-
-  // ---------- readouts ----------
+  p.flipT = Math.min(1, p.flipT + dt * 9);
   p.speed = Math.hypot(p.vel.x, p.vel.z);
-  if (p.grounded) { p.groundedTime += dt; p.airTime = 0; }
-  else            { p.airTime += dt; p.groundedTime = 0; p.apex = Math.max(p.apex, p.pos.y); }
-  return r;
-}
+  if (p.ball) p.roll += (p.speed / Math.max(0.35, T.height * T.ballHeightMult * 0.5)) * dt;
 
-/** Hurtbox depth, in metres. This is what Edge-On and Flatten actually buy you. */
-export function hurtDepth(p) {
-  const base = T.normalDepth;
-  const target = p.stance === STANCE.FLATTEN ? T.flattenDepth : T.edgeDepth;
-  return base + (target - base) * p.thin;
+  if (!p.grounded) p.apex = Math.max(p.apex, p.pos.y);
+  return r;
 }

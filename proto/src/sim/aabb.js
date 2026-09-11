@@ -112,28 +112,3 @@ export function moveAndCollide(pos, vel, half, height, dt, solids, stepHeight, w
   }
   return res;
 }
-
-/** Nearest wall within `reach`, as a surface normal. Used by Flatten. */
-export function probeWall(pos, half, height, reach, solids) {
-  const mid = pos.y + height * 0.5, hh = height * 0.35;
-  let best = null, bestDist = reach;
-  for (let i = 0; i < solids.length; i++) {
-    const s = solids[i];
-    if (s.maxy < mid - hh || s.miny > mid + hh) continue;
-    const cx = Math.max(s.minx, Math.min(pos.x, s.maxx));
-    const cz = Math.max(s.minz, Math.min(pos.z, s.maxz));
-    const dx = pos.x - cx, dz = pos.z - cz;
-    const d = Math.hypot(dx, dz) - half;
-    if (d < bestDist) {
-      // which face are we nearest?
-      const px = Math.min(Math.abs(pos.x - s.minx), Math.abs(pos.x - s.maxx));
-      const pz = Math.min(Math.abs(pos.z - s.minz), Math.abs(pos.z - s.maxz));
-      let nx = 0, nz = 0;
-      if (px < pz) nx = pos.x < (s.minx + s.maxx) / 2 ? -1 : 1;
-      else         nz = pos.z < (s.minz + s.maxz) / 2 ? -1 : 1;
-      best = { nx, nz, solid: s, dist: d };
-      bestDist = d;
-    }
-  }
-  return best;
-}

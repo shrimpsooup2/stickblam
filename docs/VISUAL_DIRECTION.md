@@ -111,10 +111,12 @@ physicality as a paper object — not a sprite-shaped hole in the rendering.
 - **Turning is a flip, not a rotation.** Changing facing compresses the sprite to
   nothing and pops it out mirrored, over 2–3 frames. A card turning over, never a
   smooth Y-axis spin.
-- **Thinness is a verb you spend**, not a passive exploit. Edge-On, Flatten, Paper
-  Glide and Crumple are in [DESIGN.md §2](DESIGN.md). Each is a held, costly
-  action — the flatness is always something the player *did*, never something that
-  happened to them.
+- **Thinness is a verb you spend**, not a passive exploit. Edge-On, Paper Glide and
+  Ball are in [DESIGN.md §2](DESIGN.md). Each is a costly action — the flatness is
+  always something the player *did*, never something that happened to them.
+- **A glide landing is a face-plant.** The stickman arrives flat on the page and
+  peels itself up over about a second. Draw the recovery, don't skip it: it is the
+  price of the only stable shooting platform in the game.
 
 ### Animation: choppy on purpose
 

@@ -7,22 +7,26 @@ const RANGES = {
   gravity: [4, 50], maxSpeed: [2, 20], accel: [5, 200], friction: [0, 20],
   stopSpeed: [0, 8], airAccel: [0, 60], airWishSpeed: [0.1, 8], airControl: [0, 2],
   jumpVel: [2, 16], coyoteTime: [0, 0.4], jumpBuffer: [0, 0.4], stepHeight: [0, 1],
-  edgeEnterTime: [0.01, 0.6], edgeSpeedMult: [0.1, 1], edgeDepth: [0.01, 0.4],
-  flattenSpeed: [0, 1.5], flattenReach: [0.1, 2], flattenMaxTime: [0, 15],
-  glideGravityMult: [0.02, 1], glideMaxFall: [0.5, 20], glideAirControl: [0.5, 6],
-  crumpleEnterSpeed: [0, 12], crumpleBoost: [0, 10], crumpleMaxSpeed: [4, 30],
-  crumpleFriction: [0, 10], crumpleAccel: [0, 40], crumpleHeightMult: [0.2, 1],
-  crumpleExitSpeed: [0, 10], height: [1, 2.6], halfWidth: [0.15, 0.8],
+  edgeEnterTime: [0.02, 0.6], edgeExitTime: [0.05, 2], edgeShootLock: [0, 3],
+  edgeSpeedMult: [0.1, 1], edgeDepth: [0.01, 0.4],
+  glideMinClearance: [0.5, 12], glideFallSpeed: [0.2, 8], glideAirAccel: [1, 30],
+  glideMaxSpeed: [1, 16], glideRecoverTime: [0, 3],
+  ballFriction: [0, 5], ballAccel: [1, 40], ballMaxSpeed: [4, 30],
+  ballEnterBoost: [0, 8], ballHeightMult: [0.2, 1], ballJumpMult: [0.2, 1.2],
+  ballBounce: [0, 0.9],
+  height: [1, 2.6], halfWidth: [0.15, 0.8],
   lookSensitivity: [0.0004, 0.008], fov: [60, 120],
+  scopeTime: [0.02, 0.8], scopeFov: [20, 90], scopeSpeedMult: [0.1, 1],
+  fireInterval: [0.03, 1], recoilKick: [0, 0.25], swayAmount: [0, 0.12], bobAmount: [0, 0.1],
 };
 const GROUPS = [
   ['Ground',  ['maxSpeed', 'accel', 'friction', 'stopSpeed']],
   ['Air',     ['gravity', 'airAccel', 'airWishSpeed', 'airControl']],
   ['Jump',    ['jumpVel', 'coyoteTime', 'jumpBuffer', 'stepHeight']],
-  ['Edge-On', ['edgeEnterTime', 'edgeSpeedMult', 'edgeDepth']],
-  ['Flatten', ['flattenSpeed', 'flattenReach', 'flattenMaxTime']],
-  ['Glide',   ['glideGravityMult', 'glideMaxFall', 'glideAirControl']],
-  ['Crumple', ['crumpleEnterSpeed', 'crumpleBoost', 'crumpleMaxSpeed', 'crumpleFriction', 'crumpleAccel', 'crumpleHeightMult']],
+  ['Edge-On', ['edgeEnterTime', 'edgeExitTime', 'edgeShootLock', 'edgeSpeedMult', 'edgeDepth']],
+  ['Glide',   ['glideMinClearance', 'glideFallSpeed', 'glideAirAccel', 'glideMaxSpeed', 'glideRecoverTime']],
+  ['Ball',    ['ballFriction', 'ballAccel', 'ballMaxSpeed', 'ballEnterBoost', 'ballHeightMult', 'ballJumpMult', 'ballBounce']],
+  ['Weapon',  ['scopeTime', 'scopeFov', 'scopeSpeedMult', 'fireInterval', 'recoilKick', 'swayAmount', 'bobAmount']],
   ['Body',    ['height', 'halfWidth', 'fov', 'lookSensitivity']],
 ];
 
@@ -31,7 +35,7 @@ export function createHud(root, post) {
 
   root.innerHTML = `
     <div id="readout"></div>
-    <div id="crosshair"></div>
+    <div id="crosshair"><i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i><i class="ring"></i></div>
     <div id="labels"></div>
     <div id="panel">
       <div class="phead"><b>STICKBLAM</b> <span>movement testbed</span></div>
@@ -122,15 +126,25 @@ export function createHud(root, post) {
     }
   }
 
+  const cross = root.querySelector('#crosshair');
+
+  /** The crosshair carries the weapon state: spread, locked-out, scoped. */
+  function updateCrosshair(spread, locked, scopeT) {
+    cross.style.setProperty('--spread', spread.toFixed(1) + 'px');
+    cross.style.setProperty('--scope', scopeT.toFixed(3));
+    cross.classList.toggle('locked', locked);
+  }
+
   function update(p, sim, fps, extra) {
     readout.innerHTML = `
-      <div class="rrow"><b>${STANCE_NAME[p.stance]}</b>${p.crumpled ? ' · rolling' : ''}${p.gliding ? ' · gliding' : ''}</div>
+      <div class="rrow"><b>${STANCE_NAME[p.stance]}</b>${extra.locked ? ' · <span style="color:var(--margin)">no fire</span>' : ''}</div>
       <div class="rgrid">
         <span>speed</span><em>${p.speed.toFixed(2)}</em>
         <span>vert</span><em>${p.vel.y.toFixed(2)}</em>
         <span>height</span><em>${p.height.toFixed(2)}</em>
         <span>hurtbox</span><em>${extra.hurt.toFixed(3)}</em>
         <span>ground</span><em>${p.grounded ? 'yes' : 'no'}</em>
+        <span>clearance</span><em>${p.clearance === Infinity ? '&infin;' : p.clearance.toFixed(1)}</em>
         <span>pos</span><em>${p.pos.x.toFixed(1)}, ${p.pos.y.toFixed(1)}, ${p.pos.z.toFixed(1)}</em>
         <span>apex</span><em>${extra.apex.toFixed(2)}</em>
         <span>tick</span><em>${sim.tick}</em>
@@ -139,6 +153,6 @@ export function createHud(root, post) {
   }
 
   const togglePanel = () => panel.classList.toggle('hidden');
-  return { update, setLabels, updateLabels, togglePanel,
+  return { update, setLabels, updateLabels, togglePanel, updateCrosshair,
            hideHint: () => root.querySelector('#hint').classList.add('gone') };
 }

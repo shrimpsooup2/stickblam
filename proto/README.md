@@ -57,9 +57,18 @@ pose but takes a different route there every time.
 | **Readability range** | Dummies at 10–50m. The Phase 0 gate: can you read a stickman at 40m? |
 | **Jump gym** | Ledges either side of the real apex (1.26m), so the ceiling is obvious in play |
 | **Stairs** | Does step-up feel like walking, or like bumping? |
-| **Glide tower** | 26m drop with range pads at 9/18/27/36m |
-| **Crumple tunnel** | A ceiling only a roll fits under |
-| **Flatten wall** | A chasm you can only cross stuck to the wall |
+| **Glide tower** | 26m drop with range pads at 9/18/27/36m. Can you actually aim on the way down? |
+| **Roll tunnel** | A ceiling only a ball fits under |
+| **Roll course** | A long run with a kink — does momentum carry the way a ball should? |
+
+## Controls
+
+`WASD` move · `Space` jump · `F` (or Space in air) deploy glide · `Shift` hold to
+roll · `Q` Edge-On · right mouse scope · left mouse fire · `V` third person ·
+`R` respawn · `H` panel
+
+The crosshair carries the weapon state: it spreads with movement, tightens when
+scoped, and greys out whenever you cannot fire.
 
 ## Movement model
 

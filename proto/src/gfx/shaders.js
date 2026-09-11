@@ -89,7 +89,7 @@ export const SPRITE_VS = HEAD + `
 layout(location=0) in vec2 aCorner;     // -0.5..0.5 quad
 layout(location=1) in vec4 iPos;        // xyz = world foot position, w = height
 layout(location=2) in vec4 iUV;         // atlas rect: x,y,w,h
-layout(location=3) in vec4 iParams;     // x = width scale (flip/thin), y = ink, z = lean, w = unused
+layout(location=3) in vec4 iParams;     // x = width scale (flip/thin), y = ink, z = lean, w = roll
 
 uniform mat4 uViewProj;
 uniform vec3 uRight;
@@ -103,10 +103,14 @@ out float vDist;
 void main(){
   float h = iPos.w;
   float w = h * 0.62 * iParams.x;
+  // roll the quad about its own centre, so a ball visibly tumbles
+  vec2 c = vec2(aCorner.x, aCorner.y);
+  float rs = sin(iParams.w), rc = cos(iParams.w);
+  vec2 rr = vec2(c.x * rc - c.y * rs, c.x * rs + c.y * rc);
   vec3 world = iPos.xyz
-             + uRight * (aCorner.x * w)
-             + uUp    * ((aCorner.y + 0.5) * h);
-  world.x += iParams.z * (aCorner.y + 0.5);     // lean, for the crumple roll
+             + uRight * (rr.x * w)
+             + uUp    * ((rr.y + 0.5) * h);
+  world.x += iParams.z * (aCorner.y + 0.5);
   vUV  = vec2(iUV.x + (aCorner.x + 0.5) * iUV.z, iUV.y + (0.5 - aCorner.y) * iUV.w);
   vInk = iParams.y;
   vDist = length(world - uCamPos);
@@ -161,6 +165,36 @@ layout(location=1) out vec4 oNormalDepth;
 void main(){
   oColor = vec4(vec3(0.04), vInk);
   oNormalDepth = vec4(0.5, 0.5, 1.0, gl_FragCoord.z);
+}`;
+
+// ------------------------------------------------------------- viewmodel ----
+// A screen-space quad drawn into the g-buffer, so the grain, hatching and
+// outline passes treat the weapon as part of the same sheet of paper.
+export const VM_VS = HEAD + `
+layout(location=0) in vec2 aCorner;
+uniform vec4 uRect;      // cx, cy, halfW, halfH in NDC
+uniform float uRot;
+uniform vec2 uCell;      // atlas cell origin + size in UV (x, width)
+uniform float uAspect;
+out vec2 vUV;
+void main(){
+  vec2 p = aCorner * uRect.zw;
+  float c = cos(uRot), s = sin(uRot);
+  p = vec2(p.x * c - p.y * s * uAspect, p.x * s / uAspect + p.y * c);
+  vUV = vec2(uCell.x + (aCorner.x + 0.5) * uCell.y, 0.5 - aCorner.y);
+  gl_Position = vec4(uRect.xy + p, 0.0, 1.0);
+}`;
+
+export const VM_FS = HEAD + `
+in vec2 vUV;
+layout(location=0) out vec4 oColor;
+layout(location=1) out vec4 oNormalDepth;
+uniform sampler2D uGun;
+void main(){
+  float a = smoothstep(0.34, 0.56, texture(uGun, vUV).a);
+  if (a < 0.35) discard;
+  oColor = vec4(vec3(mix(0.75, 0.05, a)), 1.0);
+  oNormalDepth = vec4(0.5, 0.5, 1.0, 0.00015);   // nearest depth: never outlined against the world
 }`;
 
 // -------------------------------------------------------------------- post --

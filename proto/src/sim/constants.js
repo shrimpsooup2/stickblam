@@ -23,32 +23,29 @@ export const T = {
   autoHop:            true,   // holding jump re-hops on landing
   stepHeight:          0.38,  // auto-climb ledges up to here
 
-  // --- Edge-On: turn sideways, become a sliver ---
-  edgeEnterTime:       0.12,  // seconds to rotate perpendicular
-  edgeSpeedMult:       0.60,
-  edgeDepth:           0.05,  // hurtbox depth when fully edge-on
+  // --- Edge-On: turn a full 90 degrees and become a sliver ---
+  edgeEnterTime:       0.14,  // snap round to perpendicular
+  edgeExitTime:        0.55,  // but come back slowly -- the tax on tapping it
+  edgeShootLock:       1.00,  // and you cannot shoot for this long after release
+  edgeSpeedMult:       0.55,
+  edgeDepth:           0.05,
   normalDepth:         0.30,
 
-  // --- Flatten: press onto a wall, become part of the artwork ---
-  flattenSpeed:        0.42,  // fraction of maxSpeed while sliding along a wall
-  flattenReach:        0.55,  // how close a wall must be
-  flattenMaxTime:      4.0,   // 0 = unlimited
-  flattenDepth:        0.03,
+  // --- Paper Glide: a committed deployment, not a hold ---
+  glideMinClearance:   2.60,  // needs more air beneath you than a jump can buy
+  glideFallSpeed:      1.55,  // slow enough to aim and shoot on the way down
+  glideAirAccel:      10.0,
+  glideMaxSpeed:       5.20,
+  glideRecoverTime:    0.95,  // you land flat and have to get up
 
-  // --- Paper Glide: flat things catch air ---
-  glideGravityMult:    0.22,
-  glideMaxFall:        3.2,
-  glideAirControl:     2.1,   // multiplies airAccel while gliding
-  glideMinFallSpeed:   0.6,   // must actually be falling before it engages
-
-  // --- Crumple: ball up and roll ---
-  crumpleEnterSpeed:   4.2,   // need this much speed to start a roll
-  crumpleBoost:        3.4,   // m/s added on entry
-  crumpleMaxSpeed:    12.5,
-  crumpleFriction:     1.5,   // much slicker than standing
-  crumpleAccel:        7.0,   // but you can barely steer
-  crumpleHeightMult:   0.48,
-  crumpleExitSpeed:    3.0,   // drops out of the roll below this
+  // --- Ball: hold crouch and roll ---
+  ballFriction:        0.34,  // barely any -- a ball does not come to a stop
+  ballAccel:           9.0,   // and you can barely steer it
+  ballMaxSpeed:       13.0,
+  ballEnterBoost:      1.9,
+  ballHeightMult:      0.42,
+  ballJumpMult:        0.72,
+  ballBounce:          0.32,  // keeps a little vertical energy on landing
 
   // --- body ---
   height:              1.78,
@@ -59,10 +56,19 @@ export const T = {
   // --- camera ---
   lookSensitivity:     0.0022,
   fov:                 88,
+
+  // --- weapon feel ---
+  scopeTime:           0.16,  // hip <-> scoped
+  scopeFov:            52,
+  scopeSpeedMult:      0.52,
+  fireInterval:        0.16,
+  recoilKick:          0.055,
+  swayAmount:          0.030,
+  bobAmount:           0.024,
 };
 
-export const STANCE = { NORMAL: 0, EDGE_ON: 1, CRUMPLE: 2, FLATTEN: 3 };
-export const STANCE_NAME = ['Normal', 'Edge-On', 'Crumple', 'Flatten'];
+export const STANCE = { NORMAL: 0, EDGE_ON: 1, BALL: 2, GLIDE: 3, RECOVER: 4 };
+export const STANCE_NAME = ['Normal', 'Edge-On', 'Ball', 'Gliding', 'Getting up'];
 
 export const TICK = 1 / 120;   // fixed sim step. Deterministic on purpose:
                                // this is what server-authoritative netcode needs.

@@ -74,36 +74,33 @@ export function buildTestbed() {
     solid(Math.sin(a) * rr, i * 0.56 + 0.28, -40 + Math.cos(a) * rr,
           1.5, 0.3, 1.5, 0.64, 0);
   }
-  label(0, towerH + 1.5, -40, towerH + 'm drop');
+  label(0, towerH + 1.5, -40, towerH + 'm drop  ·  F opens the glide');
+  label(0, 2.4, -33, 'needs ' + T.glideMinClearance.toFixed(1) + 'm of air below you', 'note');
   // landing pads at increasing distance, to read glide range off the ground
   for (let i = 1; i <= 4; i++) {
     solid(i * 9, 0.06, -40, 5, 0.12, 5, 0.50, 0);
     label(i * 9, 0.9, -40, (i * 9) + 'm out');
   }
 
-  // ------------------------------------------- WEST: crumple + flatten ------
-  label(-16, 3.6, -6, 'CRUMPLE TUNNEL', 'station');
+  // ----------------------------------------------- WEST: roll stations ------
+  label(-16, 3.6, -6, 'ROLL TUNNEL', 'station');
   // a run-up, then a ceiling only a roll fits under
-  const ceilY = T.height * T.crumpleHeightMult + 0.22;
+  const ceilY = T.height * T.ballHeightMult + 0.42;
   solid(-20, ceilY + 1.6, 0, 16, 3.2, 7, 0.60, 0, 'tunnel roof');
   solid(-20, 1.0, 4.0, 16, 2.0, 0.5, 0.60, 2);
   solid(-20, 1.0, -4.0, 16, 2.0, 0.5, 0.60, 2);
   label(-20, ceilY + 0.5, 0, 'clearance ' + ceilY.toFixed(2) + 'm');
-  label(-11, 2.6, 0, 'need ' + T.crumpleEnterSpeed.toFixed(1) + ' m/s', 'note');
+  label(-11, 2.6, 0, 'hold crouch to fit', 'note');
 
-  label(-16, 4.6, -20, 'FLATTEN WALL', 'station');
-  solid(-22, 4, -22, 0.6, 8, 24, 0.56, 2, 'flatten wall');
-  for (let i = 0; i < 5; i++) label(-21.5, 1.2 + i * 1.6, -30 + i * 4, '—');
-  // a gap in the floor you can only cross by flattening along the wall
-  solid(-26, -1, -22, 8, 2, 24, 0.80, 1);
-  world.solids.splice(world.solids.findIndex(s => s.tag === 'floor'), 1);
-  boxes.splice(0, 1);
-  // rebuild the ground as four pieces, leaving a chasm by the flatten wall
-  solid(0, -1, 30, 220, 2, 160, 0.80, 1, 'floor');
-  solid(0, -1, -20, 180, 2, 60, 0.80, 1, 'floor');
-  solid(30, -1, -60, 160, 2, 60, 0.80, 1, 'floor');
-  solid(-60, -1, -60, 100, 2, 60, 0.80, 1, 'floor');
-  label(-21, 1.0, -22, 'chasm → flatten across', 'note');
+  // A rolling course: long straight walls with a kink, to feel momentum carry.
+  label(-26, 3.8, -28, 'ROLL COURSE', 'station');
+  for (let i = 0; i < 8; i++) {
+    solid(-34 + i * 0.4, 1.2, -30 - i * 3.2, 0.5, 2.4, 3.2, 0.60, 2);
+    solid(-20 - i * 0.4, 1.2, -30 - i * 3.2, 0.5, 2.4, 3.2, 0.60, 2);
+  }
+  solid(-27, 1.2, -28, 15, 2.4, 0.5, 0.62, 2);
+  label(-27, 1.5, -32, 'hold crouch, then let go of the stick', 'note');
+  label(-27, 1.2, -52, 'a ball does not stop', 'note');
 
   // ------------------------------------------------------ sparring dummies --
   dummies.push({ x: 4, y: 0, z: -6, pose: 'idle', seed: 2 });

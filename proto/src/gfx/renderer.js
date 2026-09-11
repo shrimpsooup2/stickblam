@@ -1,6 +1,7 @@
 import * as G from './gl.js';
 import * as S from './shaders.js';
 import { makeAtlas, BOIL_FPS } from './sprites.js';
+import { makeViewmodel } from './viewmodel.js';
 
 const CUBE = (() => {
   // 6 faces, position + normal
@@ -29,6 +30,7 @@ export function createRenderer(canvas) {
   const spriteProg = G.compile(gl, S.SPRITE_VS, S.SPRITE_FS, 'sprite');
   const lineProg   = G.compile(gl, S.LINE_VS, S.LINE_FS, 'line');
   const postProg   = G.compile(gl, S.POST_VS, S.POST_FS, 'post');
+  const vmProg     = G.compile(gl, S.VM_VS, S.VM_FS, 'viewmodel');
 
   // ---- box geometry + instances ----
   const cubeVBO = G.buffer(gl, CUBE);
@@ -67,6 +69,12 @@ export function createRenderer(canvas) {
   gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 16, 0);
   gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 1, gl.FLOAT, false, 16, 12);
 
+  // ---- viewmodel quad (non-instanced) ----
+  const vmVAO = gl.createVertexArray();
+  gl.bindVertexArray(vmVAO);
+  gl.bindBuffer(gl.ARRAY_BUFFER, quadVBO);
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 8, 0);
+
   // ---- fullscreen triangle ----
   const postVBO = G.buffer(gl, new Float32Array([-1,-1, 3,-1, -1,3]));
   const postVAO = gl.createVertexArray();
@@ -77,7 +85,16 @@ export function createRenderer(canvas) {
 
   // ---- stickman atlas ----
   const atlas = makeAtlas();
+  const vm = makeViewmodel();
   let lastBoil = -1;
+
+  const gunTex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, gunTex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, vm.canvas);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   const atlasTex = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, atlasTex);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, atlas.canvas);
@@ -118,6 +135,9 @@ export function createRenderer(canvas) {
       gl.bindTexture(gl.TEXTURE_2D, atlasTex);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, atlas.canvas);
       gl.generateMipmap(gl.TEXTURE_2D);
+      vm.redraw(boil);
+      gl.bindTexture(gl.TEXTURE_2D, gunTex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, vm.canvas);
     }
     lastCam.x = cam.x; lastCam.y = cam.y; lastCam.z = cam.z;
     G.perspective(proj, cam.fov, W / H, 0.05, 260);
@@ -181,6 +201,22 @@ export function createRenderer(canvas) {
       gl.bindBuffer(gl.ARRAY_BUFFER, lineVBO);
       gl.bufferData(gl.ARRAY_BUFFER, lineData.subarray(0, k), gl.DYNAMIC_DRAW);
       gl.drawArrays(gl.LINES, 0, k / 4);
+    }
+
+    // --- viewmodel, on top of the world but inside the paper ---
+    if (scene.vmodel) {
+      const v = scene.vmodel;
+      gl.disable(gl.DEPTH_TEST);
+      gl.useProgram(vmProg.program);
+      gl.uniform4f(vmProg.u.uRect, v.cx, v.cy, v.hw, v.hh);
+      gl.uniform1f(vmProg.u.uRot, v.rot);
+      gl.uniform2f(vmProg.u.uCell, v.cell * 0.5, 0.5);
+      gl.uniform1f(vmProg.u.uAspect, W / H);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, gunTex);
+      gl.uniform1i(vmProg.u.uGun, 0);
+      gl.bindVertexArray(vmVAO);
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+      gl.enable(gl.DEPTH_TEST);
     }
 
     // --- post ---

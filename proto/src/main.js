@@ -1,5 +1,5 @@
 import { T, TICK, STANCE } from './sim/constants.js';
-import { makePlayer, hurtDepth } from './sim/player.js';
+import { makePlayer, hurtDepth, canShoot } from './sim/player.js';
 import { makeSim, advance, renderPos } from './sim/sim.js';
 import { raycast } from './sim/world.js';
 import { createRenderer } from './gfx/renderer.js';
@@ -26,6 +26,8 @@ player.yaw = level.world.spawnYaw;
 const sim = makeSim(level.world, player);
 
 const post = { time: 0, hatch: 1.0, grain: 0.75, outline: 1.0 };
+// Weapon state lives here, not in the sim: it is presentation until Phase 4.
+const gun = { scopeT: 0, recoil: 0, cooldown: 0, bob: 0, swayX: 0, swayY: 0 };
 const hud = createHud(hudRoot, post);
 hud.setLabels(level.labels);
 const input = createInput(canvas);
@@ -39,7 +41,11 @@ function respawn() {
   player.pos.y = level.world.spawn.y + 0.5;
   player.pos.z = level.world.spawn.z;
   player.vel.x = player.vel.y = player.vel.z = 0;
-  player.crumpled = false;
+  player.ball = false;
+  player.gliding = false;
+  player.recover = 0;
+  player.thin = 0;
+  player.shootLock = 0;
   player.stance = STANCE.NORMAL;
   player.apex = 0;
 }
@@ -88,6 +94,10 @@ function frame(now) {
     player.pitch = clamp(player.pitch - m.dy * T.lookSensitivity, -1.52, 1.52);
     hud.hideHint();
   }
+  if (input.state.locked) {
+    gun.swayX += (-m.dx * 0.0016 - gun.swayX) * Math.min(1, dtReal * 9);
+    gun.swayY += (-m.dy * 0.0016 - gun.swayY) * Math.min(1, dtReal * 9);
+  }
   if (input.consume('view')) thirdPerson = !thirdPerson;
   if (input.consume('respawn')) respawn();
   if (input.consume('panel')) hud.togglePanel();
@@ -97,12 +107,19 @@ function frame(now) {
   advance(sim, dtReal, st);
   renderPos(sim, rp);
 
+  // ---------- weapon ----------
+  gun.scopeT += (((st.scoped || gun.forceScope) && canShoot(player) ? 1 : 0) - gun.scopeT) *
+                Math.min(1, dtReal / Math.max(T.scopeTime, 1e-3));
+  gun.recoil = Math.max(0, gun.recoil - dtReal * 5.5);
+  gun.cooldown = Math.max(0, gun.cooldown - dtReal);
+  gun.bob += dtReal * player.speed * 1.5;
+
   // ---------- camera ----------
   const cp = Math.cos(player.pitch), sp = Math.sin(player.pitch);
   const cy = Math.cos(player.yaw), sy = Math.sin(player.yaw);
   const fx = -sy * cp, fy = sp, fz = cy * cp;        // forward
   const eyeY = rp.y + rp.h * (T.eyeHeight / T.height);
-  const cam = { fov: T.fov, x: rp.x, y: eyeY, z: rp.z,
+  const cam = { fov: T.fov + (T.scopeFov - T.fov) * gun.scopeT, x: rp.x, y: eyeY, z: rp.z,
                 tx: rp.x + fx, ty: eyeY + fy, tz: rp.z + fz };
   if (thirdPerson) {
     const back = 4.2, up = 1.1;
@@ -111,47 +128,69 @@ function frame(now) {
   }
   const look = { rx: -cy, rz: -sy };   // cross(forward, up) on the ground plane
 
-  if (input.consumeShoot() && input.state.locked) {
+  if (input.firing() && gun.cooldown <= 0 && canShoot(player)) {
+    gun.cooldown = T.fireInterval;
+    gun.recoil = 1;
     traceShot(rp.x, eyeY, rp.z, fx, fy, fz);
   }
+
+  // ---------- viewmodel ----------
+  // hip: low and off to the side. scoped: brought up onto the centre line.
+  const sc = gun.scopeT;
+  const gnd = player.grounded ? 1 : 0.25;
+  const bobX = Math.sin(gun.bob) * T.bobAmount * (1 - sc) * gnd;
+  const bobY = Math.abs(Math.cos(gun.bob)) * T.bobAmount * 0.7 * (1 - sc) * gnd;
+  const vmodel = thirdPerson ? null : {
+    cx: (0.26 - 0.26 * sc) + bobX + gun.swayX * T.swayAmount * 26,
+    cy: (-0.70 + 0.10 * sc) + bobY + gun.swayY * T.swayAmount * 26 - gun.recoil * T.recoilKick,
+    hw: 0.34 - 0.04 * sc,
+    hh: 0.46 - 0.05 * sc,
+    rot: (-0.14 + 0.14 * sc) - gun.recoil * 0.10,
+    cell: sc > 0.5 ? 1 : 0,
+  };
 
   // ---------- sprites ----------
   sprites.length = 0;
   for (let i = 0; i < level.dummies.length; i++) {
     const d = level.dummies[i];
-    const pick = poseFor({ stance: 0, crumpled: false, thin: 0, grounded: true,
+    const pick = poseFor({ stance: 0, ball: false, thin: 0, grounded: true,
                            vy: 0, speed: d.pose.startsWith('run') ? 4 : 0 }, post.time, d.seed);
     const r = renderer.atlas.rects[d.pose.startsWith('run') ? pick.pose : 'idle'][pick.variant];
     sprites.push(d.x, d.y, d.z, T.height, r.x, r.y, r.w, r.h, 1, 0.62, 0, 0);
   }
   if (thirdPerson) {
-    const pick = poseFor({ stance: player.stance, crumpled: player.crumpled, thin: player.thin,
+    const pick = poseFor({ stance: player.stance, ball: player.ball, thin: player.thin,
                            grounded: player.grounded, vy: player.vel.y, speed: player.speed },
                          post.time, 0);
     const r = renderer.atlas.rects[pick.pose][pick.variant];
     // the card flip: compress to nothing, pop out mirrored
     const flip = Math.sin(clamp(player.flipT, 0, 1) * Math.PI * 0.5);
     const thinScale = 1 - player.thin * 0.86;
-    sprites.push(rp.x, rp.y, rp.z, rp.h * (player.crumpled ? 1.0 : 1.0),
+    sprites.push(rp.x, rp.y, rp.z, rp.h,
                  r.x, r.y, r.w, r.h,
-                 player.facing * flip * thinScale, 0.9, player.crumpled ? 0.12 : 0, 0);
+                 player.facing * flip * thinScale, 0.9, 0,
+                 player.ball ? -player.roll * player.facing : 0);
   }
 
   // ---------- draw ----------
   const w = Math.floor(canvas.clientWidth * Math.min(devicePixelRatio || 1, 1.75));
   const h = Math.floor(canvas.clientHeight * Math.min(devicePixelRatio || 1, 1.75));
   renderer.resize(Math.max(2, w), Math.max(2, h));
-  renderer.render({ cam, boxes, sprites, lines: inkMarks, post }, look);
+  renderer.render({ cam, boxes, sprites, lines: inkMarks, post, vmodel }, look);
 
   hud.updateLabels(
     (x, y, z) => { const p = renderer.project(x, y, z); if (!p) return null;
                    return { x: p.x / (w / canvas.clientWidth), y: p.y / (h / canvas.clientHeight),
                             z: p.z, dist: p.dist }; },
     canvas.clientWidth, canvas.clientHeight);
-  hud.update(player, sim, fps, { hurt: hurtDepth(player), apex: player.apex });
+  const locked = !canShoot(player);
+  const spread = 7 + player.speed * 0.55 + (player.grounded ? 0 : 5)
+               - gun.scopeT * 5 + gun.recoil * 9;
+  hud.updateCrosshair(Math.max(2, spread), locked, gun.scopeT);
+  hud.update(player, sim, fps, { hurt: hurtDepth(player), apex: player.apex, locked });
 
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.__stickblam = { player, sim, level, T, post, gl: renderer.gl, atlas: renderer.atlas,
+window.__stickblam = { player, sim, level, T, post, gun, gl: renderer.gl, atlas: renderer.atlas,
   get spriteCount(){ return sprites.length / 12; }, get firstSprite(){ return sprites.slice(0,12); } };

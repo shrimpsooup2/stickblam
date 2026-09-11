@@ -3,12 +3,13 @@
 
 export const BINDINGS = [
   ['W A S D', 'move'],
-  ['Space', 'jump  ·  hold while falling = Paper Glide'],
-  ['Shift', 'crouch  ·  at speed = Crumple roll'],
-  ['Q  /  right mouse', 'Edge-On'],
-  ['F', 'Flatten (near a wall)'],
+  ['Space', 'jump'],
+  ['F  /  Space in air', 'deploy Paper Glide — needs height, cannot be cancelled'],
+  ['Shift (hold)', 'Ball — rolls, keeps momentum, can still shoot'],
+  ['Q', 'Edge-On — 90°, slow return, no firing for 1s after'],
+  ['Right mouse', 'scope'],
+  ['Left mouse', 'fire'],
   ['V', 'first / third person'],
-  ['Left mouse', 'trace a shot'],
   ['R', 'respawn'],
   ['H', 'show / hide panel'],
 ];
@@ -16,8 +17,8 @@ export const BINDINGS = [
 export function createInput(canvas) {
   const keys = new Set();
   const state = {
-    fwd: 0, right: 0, jump: false, crouch: false, edge: false, flatten: false,
-    dx: 0, dy: 0, locked: false, shoot: false,
+    fwd: 0, right: 0, jump: false, crouch: false, edge: false, glide: false,
+    scoped: false, dx: 0, dy: 0, locked: false, shoot: false,
   };
   const once = { view: false, respawn: false, panel: false };
 
@@ -37,10 +38,13 @@ export function createInput(canvas) {
 
   canvas.addEventListener('mousedown', (e) => {
     if (!state.locked) { canvas.requestPointerLock(); return; }
-    if (e.button === 0) state.shoot = true;
+    if (e.button === 0) keys.add('MouseL');
     if (e.button === 2) keys.add('MouseR');
   });
-  window.addEventListener('mouseup', (e) => { if (e.button === 2) keys.delete('MouseR'); });
+  window.addEventListener('mouseup', (e) => {
+    if (e.button === 0) keys.delete('MouseL');
+    if (e.button === 2) keys.delete('MouseR');
+  });
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
   document.addEventListener('pointerlockchange', () => {
@@ -56,15 +60,17 @@ export function createInput(canvas) {
   function sample() {
     state.fwd   = (keys.has('KeyW') ? 1 : 0) - (keys.has('KeyS') ? 1 : 0);
     state.right = (keys.has('KeyD') ? 1 : 0) - (keys.has('KeyA') ? 1 : 0);
-    state.jump    = keys.has('Space');
-    state.crouch  = keys.has('ShiftLeft') || keys.has('ShiftRight') || keys.has('ControlLeft');
-    state.edge    = keys.has('KeyQ') || keys.has('MouseR');
-    state.flatten = keys.has('KeyF');
+    state.jump   = keys.has('Space');
+    state.crouch = keys.has('ShiftLeft') || keys.has('ShiftRight') || keys.has('ControlLeft');
+    state.edge   = keys.has('KeyQ');
+    state.glide  = keys.has('KeyF') || keys.has('Space');
+    state.scoped = keys.has('MouseR');
+    state.shoot  = keys.has('MouseL');
     return state;
   }
   function consume(name) { const v = once[name]; once[name] = false; return v; }
   function consumeMouse() { const d = { dx: state.dx, dy: state.dy }; state.dx = 0; state.dy = 0; return d; }
-  function consumeShoot() { const s = state.shoot; state.shoot = false; return s; }
+  function firing() { return state.shoot && state.locked; }
 
-  return { sample, consume, consumeMouse, consumeShoot, state };
+  return { sample, consume, consumeMouse, firing, state };
 }

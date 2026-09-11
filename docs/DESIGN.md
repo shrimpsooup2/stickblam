@@ -44,13 +44,22 @@ physicality as a paper object.
 
 | Verb | Input | Effect |
 | --- | --- | --- |
-| **Edge-On** | hold | Rotate perpendicular. Hitbox collapses to a sliver. Cannot shoot, 60% move speed. A commitment, not a twitch dodge. |
-| **Flatten** | hold at a wall | Press onto the surface and become part of the level's artwork. Still shootable — but you read as graffiti. |
-| **Paper Glide** | hold jump while falling | Flat things catch air. Slow drifting descent with lateral control. |
-| **Crumple** | crouch-slide | Ball up and roll. Fast, low, can't shoot, can't turn sharply. |
+| **Edge-On** | hold | Turn a full 90°. Hitbox collapses to a sliver, speed drops 45%. Snaps round in 0.14s but comes back over 0.55s, **and you cannot fire for a second after releasing** — so tapping it is never free. |
+| **Paper Glide** | tap, in air | A *committed deployment*, not a hold. Needs 2.6m of air beneath you — more than a jump can buy. Once open it cannot be cancelled: you descend at 1.55 m/s, slow enough to aim and shoot, and you always land flat and spend ~1s getting up. |
+| **Ball** | hold crouch | Roll. Almost no friction, so you keep going long after you stop steering; you can barely turn, you bounce on landing, and **you can still shoot.** Fits under things a standing stickman cannot. |
+
+**Flatten (pressing yourself onto a wall) is cut.** It was a free wall-hang with no
+real cost, and it competed with Edge-On for the same "become thin" idea without
+adding a distinct decision. Edge-On now carries that role alone, and carries a
+price for it.
+
+The glide is the clearest expression of the whole design: it buys you the only
+stable shooting platform in the game and charges you total commitment for it. You
+cannot change your mind, you cannot speed up, everyone can see you, and you are
+helpless for a second when you land.
 
 Together these give the stickman a movement identity no other shooter has, and all
-four are direct consequences of "you are a piece of paper."
+three are direct consequences of "you are a piece of paper."
 
 ### Animation: choppy on purpose
 

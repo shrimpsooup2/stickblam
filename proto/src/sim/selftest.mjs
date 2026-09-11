@@ -1,9 +1,9 @@
 // Headless physics checks. `node proto/src/sim/selftest.mjs`
 import { T, TICK, STANCE } from './constants.js';
-import { makeWorld, addBox, raycast } from './world.js';
-import { makePlayer, stepPlayer, hurtDepth } from './player.js';
+import { makeWorld, addBox, raycast, groundClearance } from './world.js';
+import { makePlayer, stepPlayer, hurtDepth, canShoot } from './player.js';
 
-const NONE = { fwd:0, right:0, jump:false, crouch:false, edge:false, flatten:false };
+const NONE = { fwd:0, right:0, jump:false, crouch:false, edge:false, glide:false, scoped:false };
 const inp = (o={}) => ({ ...NONE, ...o });
 let pass = 0, fail = 0;
 const ok = (name, cond, detail='') => {
@@ -74,11 +74,12 @@ console.log('\n--- coyote time & jump buffer ---');
   const late = makePlayer(0, 0, 0);
   for (let i = 0; i < 2000; i++) { stepPlayer(late, inp({ right: 1 }), w, TICK); if (!late.grounded) break; }
   run(late, w, inp({ right: 1 }), T.coyoteTime + 0.05);
+  const vBefore = late.vel.y;
   stepPlayer(late, inp({ right: 1, jump: true }), w, TICK);
-  // Note: jump-while-falling deploys the glide, so vy rises slightly. What must
-  // NOT happen is a launch.
-  ok('coyote window does expire', late.vel.y < 0, 'vy=' + late.vel.y.toFixed(2) + ' (no launch)');
-  ok('late jump becomes a glide instead', late.gliding === true);
+  ok('coyote window does expire', late.vel.y < vBefore,
+     'vy=' + late.vel.y.toFixed(2) + ' (no launch)');
+  // Glide is a separate, gated toggle now -- jump does not deploy it.
+  ok('a late jump does nothing at all', late.gliding === false);
 
   const w2 = flatWorld(), q = makePlayer(0, 2.0, 0);
   let fired = false;
@@ -123,27 +124,68 @@ console.log('\n--- no tunnelling at speed ---');
 console.log('\n--- paper glide ---');
 {
   const w = flatWorld();
-  const a = makePlayer(0, 40, 0), b = makePlayer(0, 40, 0);
-  let ta = 0, tb = 0;
-  for (let i = 0; i < 4000 && !a.grounded; i++) { stepPlayer(a, inp(), w, TICK); ta += TICK; }
-  for (let i = 0; i < 4000 && !b.grounded; i++) { stepPlayer(b, inp({ jump: true }), w, TICK); tb += TICK; }
-  ok('gliding slows the fall a lot', tb > ta * 2.2,
-     'fall ' + ta.toFixed(2) + 's vs glide ' + tb.toFixed(2) + 's');
-  ok('glide clamps fall speed', Math.abs(b.vel.y) <= T.glideMaxFall + 1e-6);
+  // will not deploy without enough air beneath you
+  const low = makePlayer(0, 1.0, 0);
+  run(low, w, inp({ glide: true }), 0.1);
+  ok('will not deploy below the clearance floor', low.gliding === false,
+     'clearance ' + low.clearance.toFixed(2) + 'm < ' + T.glideMinClearance + 'm');
 
-  const c = makePlayer(0, 5, 0);
-  stepPlayer(c, inp({ jump: true }), w, TICK);
-  ok('does not engage before falling', c.gliding === false);
+  const high = makePlayer(0, 30, 0);
+  stepPlayer(high, inp(), w, TICK);
+  stepPlayer(high, inp({ glide: true }), w, TICK);
+  ok('deploys with clearance', high.gliding === true);
+
+  // it is a toggle: releasing the key does not cancel it
+  run(high, w, inp(), 0.5);
+  ok('cannot be cancelled once open', high.gliding === true);
+
+  // slow enough to aim and shoot
+  run(high, w, inp(), 1.0);
+  ok('falls slowly', Math.abs(high.vel.y) <= T.glideFallSpeed + 0.05,
+     high.vel.y.toFixed(2) + ' m/s');
+  ok('can shoot while gliding', canShoot(high) === true);
+
+  // a normal fall from the same height is far quicker
+  const drop = makePlayer(0, 30, 0);
+  let ta = 0, tb = 0;
+  for (let i = 0; i < 8000 && !drop.grounded; i++) { stepPlayer(drop, inp(), w, TICK); ta += TICK; }
+  const g2 = makePlayer(0, 30, 0);
+  stepPlayer(g2, inp(), w, TICK);
+  stepPlayer(g2, inp({ glide: true }), w, TICK);
+  for (let i = 0; i < 8000 && !g2.grounded; i++) { stepPlayer(g2, inp(), w, TICK); tb += TICK; }
+  ok('glide descent is much slower', tb > ta * 5,
+     'fall ' + ta.toFixed(2) + 's vs glide ' + tb.toFixed(2) + 's');
+
+  // and it always ends face down
+  ok('lands flat and has to get up', g2.recover > 0 && g2.stance === STANCE.RECOVER);
+  ok('cannot shoot while getting up', canShoot(g2) === false);
+  run(g2, w, inp({ fwd: 1 }), 0.3);
+  ok('barely moves while getting up', g2.speed < 1.0, g2.speed.toFixed(2) + ' m/s');
+  run(g2, w, inp(), T.glideRecoverTime);
+  ok('recovers to normal', g2.stance === STANCE.NORMAL && canShoot(g2) === true);
 }
 
 console.log('\n--- edge-on ---');
 {
   const w = flatWorld(), p = makePlayer(0, 0, 0);
   const wide = hurtDepth(p);
-  run(p, w, inp({ edge: true }), 0.5);
+  run(p, w, inp({ edge: true }), T.edgeEnterTime + 0.02);
+  ok('turns a full 90 degrees', p.thin > 0.99, 'thin=' + p.thin.toFixed(3));
   ok('hurtbox collapses to a sliver', hurtDepth(p) < wide * 0.25,
      wide.toFixed(3) + 'm -> ' + hurtDepth(p).toFixed(3) + 'm');
-  ok('thinning is not instant', T.edgeEnterTime > 0.08);
+  ok('cannot shoot while sideways', canShoot(p) === false);
+
+  // even a tap costs you: slow return AND a shooting lockout
+  const tap = makePlayer(0, 0, 0);
+  run(tap, w, inp({ edge: true }), 0.05);
+  run(tap, w, inp(), TICK);
+  ok('tapping still locks the weapon', tap.shootLock > 0.9,
+     tap.shootLock.toFixed(2) + 's');
+  run(tap, w, inp(), T.edgeExitTime * 0.4);
+  ok('returns slowly, not instantly', tap.thin > 0.0 || tap.shootLock > 0.3);
+  run(tap, w, inp(), T.edgeShootLock);
+  ok('lock expires', canShoot(tap) === true);
+
   const q = makePlayer(0, 0, 0);
   run(q, w, inp({ fwd: 1 }), 2.5);
   const full = q.speed;
@@ -152,54 +194,65 @@ console.log('\n--- edge-on ---');
      full.toFixed(2) + ' -> ' + q.speed.toFixed(2) + ' m/s');
 }
 
-console.log('\n--- crumple ---');
-{
-  const w = flatWorld(), p = makePlayer(0, 0, 0);
-  run(p, w, inp({ fwd: 1 }), 2.5);
-  const before = p.speed;
-  stepPlayer(p, inp({ fwd: 1, crouch: true }), w, TICK);
-  ok('entering a roll boosts speed', p.speed > before + 2, before.toFixed(2) + ' -> ' + p.speed.toFixed(2));
-  ok('is crumpled', p.crumpled === true);
-  run(p, w, inp({ fwd: 1, crouch: true }), 0.4);
-  ok('height drops', p.height < T.height * 0.75, p.height.toFixed(2) + 'm');
-
-  const q = makePlayer(0, 0, 0);
-  stepPlayer(q, inp({ crouch: true }), w, TICK);
-  ok('cannot roll from standing still', q.crumpled === false);
-}
-
-console.log('\n--- crumple tunnel clearance ---');
+console.log('\n--- ball ---');
 {
   const w = flatWorld();
-  // underside at 1.1m: standing (1.78) will not fit, rolling (0.85) will.
-  // Entrance at x=14, far enough that the 1.2s approach run does not reach it.
+  // no speed gate: holding crouch IS the stance
+  const p = makePlayer(0, 0, 0);
+  run(p, w, inp({ crouch: true }), 0.2);
+  ok('holding crouch from standing still makes a ball', p.ball === true);
+  ok('can shoot from inside the ball', canShoot(p) === true);
+  run(p, w, inp({ crouch: true }), 0.4);
+  ok('height drops', p.height < T.height * 0.6, p.height.toFixed(2) + 'm');
+
+  // entering with speed gives a push
+  const q = makePlayer(0, 0, 0);
+  run(q, w, inp({ fwd: 1 }), 2.5);
+  const before = q.speed;
+  run(q, w, inp({ fwd: 1, crouch: true }), TICK * 2);
+  ok('entering with speed boosts', q.speed > before + 1.0,
+     before.toFixed(2) + ' -> ' + q.speed.toFixed(2));
+
+  // and it keeps rolling -- a ball does not come to a stop
+  const r2 = makePlayer(0, 0, 0);
+  run(r2, w, inp({ fwd: 1 }), 2.0);
+  run(r2, w, inp({ fwd: 1, crouch: true }), 0.5);
+  const rollSpeed = r2.speed;
+  run(r2, w, inp({ crouch: true }), 2.0);       // let go of the stick entirely
+  ok('still rolling 2s after input stops', r2.speed > rollSpeed * 0.35,
+     rollSpeed.toFixed(2) + ' -> ' + r2.speed.toFixed(2) + ' m/s');
+
+  // compare against standing, which stops dead
+  const walk = makePlayer(0, 0, 0);
+  run(walk, w, inp({ fwd: 1 }), 2.0);
+  run(walk, w, inp(), 2.0);
+  ok('standing stops dead by comparison', walk.speed < 0.01 && r2.speed > 1.0,
+     'walk ' + walk.speed.toFixed(3) + ' vs ball ' + r2.speed.toFixed(2));
+
+  ok('the ball visibly rolls', r2.roll > 1.0, 'roll=' + r2.roll.toFixed(1) + ' rad');
+}
+
+console.log('\n--- ball tunnel clearance ---');
+{
+  const w = flatWorld();
   addBox(w, 17, 2.1, 0, 6, 2.0, 6, 'low ceiling');
   const p = makePlayer(0, 0, 0);
   run(p, w, inp({ right: 1 }), 1.2);
-  ok('approach run stops short of the tunnel', p.pos.x < 14, 'x=' + p.pos.x.toFixed(2));
   run(p, w, inp({ right: 1, crouch: true }), 2.5);
   ok('rolls under a 1.1m ceiling', p.pos.x > 20, 'x=' + p.pos.x.toFixed(2));
-  ok('cannot stand up until clear of the ceiling', p.crumpled === true || p.pos.x > 20);
-
-  // and standing height genuinely cannot pass
+  ok('cannot stand up until clear', p.ball === true || p.pos.x > 20);
   const q = makePlayer(0, 0, 0);
   run(q, w, inp({ right: 1 }), 4.0);
   ok('standing is blocked by the same tunnel', q.pos.x < 14.1, 'x=' + q.pos.x.toFixed(2));
 }
 
-console.log('\n--- flatten ---');
+console.log('\n--- ground clearance ---');
 {
   const w = flatWorld();
-  addBox(w, 2.0, 2, 0, 0.4, 4, 8, 'wall');
-  const p = makePlayer(1.4, 0, 0);
-  run(p, w, inp({ right: 1 }), 0.8);
-  run(p, w, inp({ flatten: true }), 1.0);
-  ok('sticks to the wall', p.stance === STANCE.FLATTEN);
-  ok('gravity is cancelled while flattened', Math.abs(p.vel.y) < 0.2, 'vy=' + p.vel.y.toFixed(3));
-  ok('hurtbox is thinnest of all', hurtDepth(p) <= T.normalDepth * 0.2);
-  const y0 = p.pos.y;
-  run(p, w, inp({ flatten: true, jump: true }), 0.1);
-  ok('kicks off the wall on jump', p.vel.y > 5 || p.pos.y > y0 + 0.05);
+  ok('clearance on the floor is ~0', groundClearance(w, 0, 0, 0) < 0.05);
+  ok('clearance at 10m is ~10', Math.abs(groundClearance(w, 0, 10, 0) - 10) < 0.05,
+     groundClearance(w, 0, 10, 0).toFixed(3));
+  ok('clearance over a void is infinite', groundClearance(makeWorld(), 0, 5, 0) === Infinity);
 }
 
 console.log('\n--- raycast ---');

@@ -12,6 +12,12 @@ export function addBox(world, cx, cy, cz, sx, sy, sz, tag = '') {
   return b;
 }
 
+/** Metres of air directly beneath the feet. Infinity if there is nothing below. */
+export function groundClearance(world, x, y, z, maxT = 120) {
+  const hit = raycast(world, x, y + 0.02, z, 0, -1, 0, maxT);
+  return hit ? hit.t - 0.02 : Infinity;
+}
+
 /**
  * Ray vs the static world (slab method). Returns {t, box, nx, ny, nz} or null.
  * Used by the debug trace to show what a shot would actually hit.

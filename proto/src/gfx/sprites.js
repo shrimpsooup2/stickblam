@@ -10,7 +10,7 @@
 // shader, because they have to be authored with habits, not applied as uniform
 // runtime noise.
 
-export const POSES = ['idle', 'run0', 'run1', 'run2', 'jump', 'fall', 'crumple', 'edge', 'flatten'];
+export const POSES = ['idle', 'run0', 'run1', 'run2', 'jump', 'fall', 'ball', 'edge', 'glide', 'recover'];
 export const VARIANTS = 3;          // three different drawings co-exist, so two
                                     // stickmen side by side are never identical
 export const BOIL_FPS = 8;
@@ -89,8 +89,11 @@ function poseAngles(name, r) {
     case 'run2':    return { lean: s(.18,.06), armL: s(1.05,.25),  armR: s(-1.15,.25),legL: s(-.58,.18),legR: s(.72,.18),  kneeBend: .55, elbowBend: .5 };
     case 'jump':    return { lean: s(-.12,.06),armL: s(-2.15,.25), armR: s(2.05,.25), legL: s(.48,.14), legR: s(-.32,.14), kneeBend: .85, elbowBend: .6 };
     case 'fall':    return { lean: s(.06,.08), armL: s(-2.6,.3),   armR: s(2.5,.3),   legL: s(.28,.22), legR: s(-.38,.22), kneeBend: .35, elbowBend: .7 };
-    case 'crumple': return { lean: s(1.3,.09), armL: s(-.55,.25),  armR: s(.55,.25),  legL: s(-1.25,.25),legR: s(1.25,.25),kneeBend: 1.5, elbowBend: 1.2, ball: true };
-    case 'flatten': return { lean: s(0,.03),   armL: s(-1.62,.1),  armR: s(1.62,.1),  legL: s(.12,.06), legR: s(-.12,.06), kneeBend: .05, elbowBend: .08 };
+    case 'ball':    return { lean: s(1.3,.09), armL: s(-.55,.25),  armR: s(.55,.25),  legL: s(-1.25,.25),legR: s(1.25,.25),kneeBend: 1.5, elbowBend: 1.2, ball: true };
+    // gliding: spread flat like a dropped sheet, one arm out holding the pen
+    case 'glide':   return { lean: s(.02,.04), armL: s(-1.95,.12), armR: s(1.45,.12), legL: s(.55,.1),  legR: s(-.55,.1),  kneeBend: .15, elbowBend: .2 };
+    // face down on the page, pushing up
+    case 'recover': return { lean: s(1.42,.05),armL: s(-1.05,.15), armR: s(1.05,.15), legL: s(-1.45,.1),legR: s(1.45,.1),  kneeBend: .3, elbowBend: .5, ball: true };
     case 'edge':    return { lean: s(.04,.04), armL: s(-.15,.08),  armR: s(.15,.08),  legL: s(.08,.06), legR: s(-.08,.06), kneeBend: .1, elbowBend: .12, thin: true };
     default:        return { lean: s(.04,.06), armL: s(-.3,.2),    armR: s(.32,.2),   legL: s(.14,.12), legR: s(-.16,.12), kneeBend: .12, elbowBend: .2 };
   }
@@ -229,8 +232,9 @@ export function poseFor(state, t, id = 0) {
   for (let i = 0; i < 32; i++) { acc += HOLD[i % HOLD.length]; if (acc > frame % 19) { idx = i; break; } }
   const variant = ((id + idx) % VARIANTS + VARIANTS) % VARIANTS;
 
-  if (state.stance === 3) return { pose: 'flatten', variant };
-  if (state.crumpled)     return { pose: 'crumple', variant };
+  if (state.stance === 4) return { pose: 'recover', variant };   // STANCE.RECOVER
+  if (state.stance === 3) return { pose: 'glide', variant };     // STANCE.GLIDE
+  if (state.ball)         return { pose: 'ball', variant };
   if (state.thin > 0.55)  return { pose: 'edge', variant };
   if (!state.grounded)    return { pose: state.vy > 0.5 ? 'jump' : 'fall', variant };
   if (state.speed > 0.6) {
