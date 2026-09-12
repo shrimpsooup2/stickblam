@@ -167,6 +167,14 @@ functional if unexciting gun. The pen still works; the attachments just ran out.
 | **Stapler** | Nailgun. Fires scarce map-found staples, not ink. | 3 (Body, Magazine, Grip) | Bans **every ink medium**. Only accepts `PHYSICAL` parts. Sits entirely outside the ink economy. |
 | **Highlighter** | Support beam. Marks enemies, boosts allied ink gain. | 3 (Muzzle, Body, Sight) | Cannot deal killing damage. Can only bring an enemy to 1 HP. |
 
+Each weapon is modelled from what it is LIKE to hold, not from a shared gun
+template: barrel width, how far it reaches, what is on the end, and how far off
+vertical it sits in the fist. A biro is carried across you; a spraycan is held
+nearly upright, because that is the only way a can works. `proto/src/gfx/
+viewmodel.js` is that list as data, and `proto/tools/weapons.html` is a contact
+sheet of every cell — which is how you catch two implements that have quietly
+become the same rectangle in a fist.
+
 The Eraser and the Stapler exist specifically to be the awkward ones. The Eraser
 is the comeback tool — a broke player can mug a rich one without out-gunning them,
 and it strips dry parts first. The Stapler is the genuinely ink-independent

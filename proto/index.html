@@ -34,23 +34,43 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--paper);color:var
 #crosshair.locked i{opacity:.28;background:var(--margin)}
 #crosshair.locked i.ring{background:none;border-color:var(--margin);opacity:calc(var(--scope) * .4)}
 
+/* ---- scraps ----
+   Everything flat in this world is on a piece of paper someone tore out. The
+   polygon is cut in JS by the same generator the renderer uses (gfx/paper.js);
+   the drop-shadows are what put an INK LINE on the torn edge, since clip-path
+   removes any border you give the element. Four offsets, no blur: that traces
+   the clipped silhouette instead of smudging behind it. Padding has to clear
+   the deepest tear or the clip eats the text. */
+.scrap{background:transparent no-repeat;background-size:100% 100%;border:0}
+
 /* ---- readout ---- */
-#readout{position:absolute;left:14px;top:14px;background:rgba(237,238,232,.82);
-  border:1px solid var(--edge);padding:9px 11px;min-width:186px;backdrop-filter:blur(2px)}
+#readout{position:absolute;left:14px;top:14px;padding:19px 23px;min-width:206px}
 .rrow{font-weight:600;font-size:13px;margin-bottom:6px;color:var(--ink)}
 .rgrid{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:11px}
 .rgrid span{color:var(--ink-3)}
 .rgrid em{font-style:normal;text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
 
 /* ---- map card ---- */
-#mapcard{position:absolute;left:14px;bottom:18px;max-width:290px;
-  background:rgba(237,238,232,.88);border:1px solid var(--edge);border-left:3px solid var(--margin);
-  padding:9px 12px;line-height:1.4}
+/* Both cards stack in one column bottom-left, clear of the weapon, which owns
+   the bottom-right the way a viewmodel always does. */
+#cards{position:absolute;left:14px;bottom:18px;display:flex;flex-direction:column;
+  gap:8px;align-items:flex-start;max-width:310px}
+#mapcard{width:300px;padding:19px 23px 21px;line-height:1.4}
 #mapcard b{font-family:var(--f-disp);font-size:17px;display:block;font-weight:400}
 #mapcard em{font-style:normal;font-size:10px;letter-spacing:.13em;text-transform:uppercase;
   color:var(--margin);display:block;margin:1px 0 5px}
 #mapcard span{display:block;font-size:11.5px;color:var(--ink-2);font-family:var(--f-sans)}
 #mapcard i{display:block;font-style:normal;font-size:10px;color:var(--ink-3);margin-top:5px}
+
+/* ---- weapon card: what is in your hands, and what it will take ---- */
+#weaponcard{width:300px;padding:19px 23px 17px;
+  line-height:1.35;font-family:var(--f-sans)}
+#weaponcard b{font-family:var(--f-disp);font-size:19px;display:block;font-weight:400}
+#weaponcard span{display:block;font-size:11.5px;color:var(--ink-2);margin-top:3px}
+#weaponcard u{display:flex;gap:4px;text-decoration:none;margin:7px 0 5px;flex-wrap:wrap}
+#weaponcard s{text-decoration:none;font-family:var(--f-mono);font-size:9px;letter-spacing:.1em;
+  border:1px solid var(--ink-3);padding:2px 5px;color:var(--ink-2)}
+#weaponcard i{display:block;font-style:normal;font-size:10.5px;color:var(--margin)}
 #mapcard.fade{animation:mapin .5s ease}
 @keyframes mapin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
@@ -88,15 +108,14 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--paper);color:var
 #panel button:hover{border-color:var(--margin);color:var(--margin)}
 #copied{font-size:10px;color:var(--margin);margin-top:7px;height:12px}
 
-#hint{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);
-  font-size:11.5px;color:var(--ink-2);background:rgba(237,238,232,.86);
-  border:1px solid var(--edge);padding:6px 12px;letter-spacing:.03em;transition:opacity .4s}
+#hint{position:absolute;left:50%;top:22px;transform:translateX(-50%);
+  font-size:11.5px;color:var(--ink-2);padding:17px 28px;letter-spacing:.03em;transition:opacity .4s}
 #hint.gone{opacity:0}
 #fatal{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
   justify-content:center;font-family:var(--f-sans);gap:6px;padding:24px;text-align:center}
 #fatal b{font-family:var(--f-disp);font-size:22px}
 #fatal p{max-width:46ch;color:var(--ink-2);font-size:14px;line-height:1.5}
-@media (max-width:700px){#panel{width:100%}.kb{grid-template-columns:96px 1fr}}
+@media (max-width:700px){#panel{width:100%}#mapcard{display:none}.kb{grid-template-columns:96px 1fr}}
 </style>
 
 <canvas id="view"></canvas>

@@ -1,0 +1,65 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Stickblam — weapon sheet</title>
+<style>
+  body{margin:0;background:#EDEEE8;color:#16181F;font:13px "IBM Plex Sans",system-ui,sans-serif}
+  h1{font-family:"Permanent Marker",cursive;font-weight:400;margin:18px 20px 2px}
+  p{margin:0 20px 14px;color:#4A4F59;max-width:70ch}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:0 20px 30px}
+  .cell{position:relative;background:#fff;border:1px solid #C9CCC3}
+  .cell canvas{display:block;width:100%;height:auto;image-rendering:auto}
+  .cap{position:absolute;left:6px;top:4px;font-family:"IBM Plex Mono",monospace;font-size:10px;
+       letter-spacing:.08em;text-transform:uppercase;color:#878D97}
+</style>
+<h1>Weapon sheet</h1>
+<p>Every cell of the viewmodel atlas, ink over scrap mask, redrawn on the boil tick.
+   Left of each pair is hip, right is scoped.</p>
+<div class="grid" id="g"></div>
+<script type="module">
+import { makeViewmodel, WEAPONS, VM_COLS } from '../src/gfx/viewmodel.js';
+const vm = makeViewmodel();
+const g = document.getElementById('g');
+const CELL = vm.CELL;
+const cells = [];
+for (let i = 0; i < WEAPONS.length; i++) {
+  for (let p = 0; p < 2; p++) {
+    const d = document.createElement('div');
+    d.className = 'cell';
+    const c = document.createElement('canvas');
+    c.width = c.height = CELL;
+    const cap = document.createElement('div');
+    cap.className = 'cap';
+    cap.textContent = WEAPONS[i].name + (p ? ' · scoped' : ' · hip');
+    d.append(c, cap); g.append(d);
+    cells.push({ ctx: c.getContext('2d'), i, p });
+  }
+}
+function paint() {
+  for (const c of cells) {
+    const idx = c.i * 2 + c.p;
+    const sx = (idx % VM_COLS) * CELL, sy = Math.floor(idx / VM_COLS) * CELL;
+    const g2 = c.ctx;
+    g2.clearRect(0, 0, CELL, CELL);
+    // mask first, as paper; then ink on top, the same order the shader uses
+    g2.globalCompositeOperation = 'source-over';
+    g2.fillStyle = '#EDEEE8';
+    g2.save();
+    g2.beginPath(); g2.rect(0, 0, CELL, CELL); g2.clip();
+    g2.drawImage(vm.mask, sx, sy, CELL, CELL, 0, 0, CELL, CELL);
+    g2.globalCompositeOperation = 'source-in';
+    g2.fillRect(0, 0, CELL, CELL);
+    g2.globalCompositeOperation = 'source-over';
+    g2.restore();
+    const tmp = document.createElement('canvas');
+    tmp.width = tmp.height = CELL;
+    const t = tmp.getContext('2d');
+    t.drawImage(vm.canvas, sx, sy, CELL, CELL, 0, 0, CELL, CELL);
+    t.globalCompositeOperation = 'source-in';
+    t.fillStyle = '#16181F'; t.fillRect(0, 0, CELL, CELL);
+    g2.drawImage(tmp, 0, 0);
+  }
+}
+let tick = 0;
+paint();
+setInterval(() => { vm.redraw(++tick); paint(); }, 125);
+</script>

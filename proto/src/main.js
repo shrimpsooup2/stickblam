@@ -33,10 +33,12 @@ let sim = makeSim(level.world, player);
 const post = { time: 0, hatch: 1.0, grain: 0.65, outline: 0.14, warp: 2.2,
                ink: 1.0, inkWidth: 8.0, inkOvershoot: 9.0, inkWobble: 2.0 };
 // Weapon state lives here, not in the sim: it is presentation until Phase 4.
-const gun = { scopeT: 0, recoil: 0, cooldown: 0, bob: 0, swayX: 0, swayY: 0 };
+// `weapon` indexes renderer.weapons, which is the roster from docs/DESIGN.md.
+const gun = { scopeT: 0, recoil: 0, cooldown: 0, bob: 0, swayX: 0, swayY: 0, weapon: 0 };
 const hud = createHud(hudRoot, post);
 hud.setLabels(level.labels);
 hud.setMap(MAPS[mapIndex]);
+hud.setWeapon(renderer.weapons[gun.weapon]);
 const input = createInput(canvas);
 
 let thirdPerson = false;
@@ -123,6 +125,11 @@ function frame(now) {
   if (input.consume('view')) thirdPerson = !thirdPerson;
   if (input.consume('respawn')) respawn();
   if (input.consume('map')) loadMap(mapIndex + 1);
+  const pick = input.consume('weapon'), cyc = input.consume('cycle');
+  const nw = renderer.weapons.length;
+  if (pick) gun.weapon = Math.min(nw - 1, pick - 1);
+  else if (cyc) gun.weapon = ((gun.weapon + cyc) % nw + nw) % nw;
+  if (pick || cyc) hud.setWeapon(renderer.weapons[gun.weapon]);
   if (input.consume('panel')) hud.togglePanel();
   if (player.pos.y < -40) respawn();
 
@@ -164,12 +171,20 @@ function frame(now) {
   const bobX = Math.sin(gun.bob) * T.bobAmount * (1 - sc) * gnd;
   const bobY = Math.abs(Math.cos(gun.bob)) * T.bobAmount * 0.7 * (1 - sc) * gnd;
   const vmodel = thirdPerson ? null : {
-    cx: (0.26 - 0.26 * sc) + bobX + gun.swayX * T.swayAmount * 26,
-    cy: (-0.70 + 0.10 * sc) + bobY + gun.swayY * T.swayAmount * 26 - gun.recoil * T.recoilKick,
-    hw: 0.34 - 0.04 * sc,
-    hh: 0.46 - 0.05 * sc,
+    // Sized so the implement actually reads. At the old scale the weapon was a
+    // 40px scribble in the bottom corner and you could not tell a marker from a
+    // stapler -- which defeats a roster built on what each one is like to hold.
+    // NOTE: hw/hh are the FULL width and height of the quad in NDC, not halves
+    // -- the vertex shader multiplies them by a -0.5..0.5 corner. Read as halves
+    // they give a weapon a quarter of the intended size, which is why the
+    // implement used to be an unreadable scribble in the corner.
+    cx: (0.32 - 0.32 * sc) + bobX + gun.swayX * T.swayAmount * 26,
+    cy: (-0.58 + 0.07 * sc) + bobY + gun.swayY * T.swayAmount * 26 - gun.recoil * T.recoilKick,
+    hw: 0.95 - 0.10 * sc,
+    hh: 1.25 - 0.13 * sc,
     rot: (-0.14 + 0.14 * sc) - gun.recoil * 0.10,
     cell: sc > 0.5 ? 1 : 0,
+    weapon: gun.weapon,
   };
 
   // ---------- sprites ----------

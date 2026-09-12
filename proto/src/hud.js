@@ -1,5 +1,6 @@
 import { T, STANCE_NAME } from './sim/constants.js';
 import { BINDINGS } from './input.js';
+import { scrapRect, toClipPath, scrapSVG } from './gfx/paper.js';
 
 // Live-tunable ranges. A movement prototype is only useful if you can change the
 // feel without a rebuild, so every constant that affects feel is a slider.
@@ -34,8 +35,11 @@ export function createHud(root, post) {
   const defaults = { ...T };
 
   root.innerHTML = `
-    <div id="readout"></div>
-    <div id="mapcard"></div>
+    <div id="readout" class="scrap"></div>
+    <div id="cards">
+      <div id="weaponcard" class="scrap"></div>
+      <div id="mapcard" class="scrap"></div>
+    </div>
     <div id="crosshair"><i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i><i class="ring"></i></div>
     <div id="labels"></div>
     <div id="panel">
@@ -45,7 +49,7 @@ export function createHud(root, post) {
       <div class="prow"><button id="reset">reset tuning</button><button id="copy">copy values</button></div>
       <div id="copied"></div>
     </div>
-    <div id="hint">click to capture the mouse &nbsp;·&nbsp; <b>H</b> panel &nbsp;·&nbsp; <b>V</b> third person</div>`;
+    <div id="hint" class="scrap">click to capture the mouse &nbsp;·&nbsp; <b>H</b> panel &nbsp;·&nbsp; <b>V</b> third person</div>`;
 
   root.querySelector('#keys').innerHTML = BINDINGS
     .map(([k, d]) => `<div class="kb"><kbd>${k}</kbd><span>${d}</span></div>`).join('');
@@ -127,6 +131,27 @@ export function createHud(root, post) {
     }
   }
 
+  // --- everything flat is on a scrap ---
+  // Same generator the renderer uses for the player and the weapon (gfx/paper.js),
+  // so a HUD panel is torn out of the same book as everything else rather than
+  // being a rounded rectangle with a drawn border painted on it. Percentages
+  // would stretch the tears on a wide panel, so each one is cut at its own
+  // measured size and re-cut whenever it changes shape.
+  let scrapSeed = 1;
+  function scrapify(el) {
+    const b = el.getBoundingClientRect();
+    if (b.width < 8 || b.height < 8) return;
+    const seed = (scrapSeed = (scrapSeed * 1664525 + 1013904223) >>> 0);
+    let s2 = seed || 1;
+    const r = () => { s2 ^= s2 << 13; s2 ^= s2 >>> 17; s2 ^= s2 << 5; s2 >>>= 0; return s2 / 4294967296; };
+    const pts = scrapRect(b.width, b.height, r, 12);
+    el.style.clipPath = toClipPath(pts, b.width, b.height);
+    el.style.backgroundImage = scrapSVG(pts, b.width, b.height);
+  }
+  const scraps = () => root.querySelectorAll('.scrap');
+  function recut() { for (const el of scraps()) scrapify(el); }
+  window.addEventListener('resize', recut);
+
   const mapcard = root.querySelector('#mapcard');
   function setMap(m) {
     mapcard.innerHTML = `<b>${m.name}</b><em>${m.kind}</em><span>${m.blurb}</span>
@@ -134,6 +159,14 @@ export function createHud(root, post) {
     mapcard.classList.remove('fade');
     void mapcard.offsetWidth;
     mapcard.classList.add('fade');
+    scrapify(mapcard);
+  }
+
+  const weaponcard = root.querySelector('#weaponcard');
+  function setWeapon(w) {
+    weaponcard.innerHTML = `<b>${w.name}</b><span>${w.role}</span>
+      <u>${w.slots.map((sl) => `<s>${sl}</s>`).join('')}</u><i>${w.quirk}</i>`;
+    scrapify(weaponcard);
   }
 
   const cross = root.querySelector('#crosshair');
@@ -160,9 +193,14 @@ export function createHud(root, post) {
         <span>tick</span><em>${sim.tick}</em>
         <span>fps</span><em>${fps.toFixed(0)}</em>
       </div>`;
+    // Re-cutting every frame would reshuffle the tear 60 times a second, which
+    // is the one kind of motion nothing in this world should have.
+    if (readout.offsetHeight !== readoutH) { readoutH = readout.offsetHeight; scrapify(readout); }
   }
+  let readoutH = 0;
 
   const togglePanel = () => panel.classList.toggle('hidden');
-  return { update, setLabels, updateLabels, togglePanel, updateCrosshair, setMap,
+  requestAnimationFrame(recut);
+  return { update, setLabels, updateLabels, togglePanel, updateCrosshair, setMap, setWeapon,
            hideHint: () => root.querySelector('#hint').classList.add('gone') };
 }

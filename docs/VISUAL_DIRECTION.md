@@ -303,3 +303,64 @@ Repetition is the tell. Ruled floor lines, evenly spaced hatching, constant line
 weight, a tiled grid on a wall — each of these is a *machine* signature, and a
 single one of them will sink an otherwise hand-made frame. Anything that repeats
 needs per-instance weight, per-instance spacing, and gaps.
+
+---
+
+## 10. Scraps: everything flat is on a piece of paper
+
+The world is drawn on a page. Anything FLAT in it — the players, the weapon in
+your hands, every panel of the HUD — is drawn on a **scrap**: a piece torn out
+of a book, or cut round with no patience. This is a single rule with three
+consequences worth stating, because it settles a lot of smaller questions.
+
+**A scrap is a polygon, not a blob.** A dozen or so vertices, long straightish
+cuts between them, and the odd spike where the tear ran away from whoever was
+doing it. Take a rounded rectangle and perturb its edge with noise and you get
+something organic; nobody looks at that and thinks *ripped*. Corners matter
+most: a corner cut off on the diagonal is the single clearest signal that a
+shape was torn rather than drawn. `gfx/paper.js` is the one generator, and the
+HUD clips its panels with the same function the renderer cuts sprites with.
+
+**A scrap occludes.** It is a real piece of paper, so it has a front and it
+hides what is behind it. That is what finally made players read at range: a
+white silhouette carries much further than five thin strokes do, and it gives
+the linework something to be drawn *on*.
+
+**Value order.** The bare page is the only true white in the frame (1.0) and ink
+the only true black. Every surface in the world tops out at 0.925, and a scrap
+sits at 0.945 — brighter than anything in the world, darker than the sky. A
+player therefore pops out of the background and can never be mistaken for a hole
+in it.
+
+### Two sheets, not one
+
+A scrap needs two things per cell: where the paper is, and where the ink is.
+They cannot share one RGBA texture. Filtering a single sheet drags the
+transparent surround into the paper colour, and every torn edge comes back with
+a grey halo welded to it. So the atlas generators emit an **ink** canvas and a
+**mask** canvas, both alpha-only, and the shader reads the mask to decide what
+exists and the ink to decide what is drawn on it.
+
+### One buffer, one meaning
+
+Related, and the more expensive lesson: the g-buffer's depth channel has to mean
+the same thing for every pass that writes it. The boxes wrote linear `d / far`;
+the sprites wrote `gl_FragCoord.z`, which is ~0.99 for anything past a couple of
+metres. Nothing went wrong while the only consumer was an outline detector doing
+relative comparisons. The moment the post pass started treating far depth as
+*bare page*, every player in the world was flood-filled white — and the fault
+looked exactly like a texture-binding bug, three passes away from the actual
+cause.
+
+### Shading belongs to the object, not to the screen
+
+Hatching used to be one global screen-space pattern: every surface in the world
+carried the identical texture, and the world slid underneath it whenever the
+camera moved. Both of those are unnerving, and for the same reason — the marks
+belonged to the screen rather than to the thing being drawn.
+
+So the pattern is now laid out around each object's own position on the page,
+which makes it travel with the object, and its angle, spacing and even whether
+it hatches at all vary per object AND per face. Somebody shading a drawing does
+not use one stroke direction for every plane in the picture, and does not shade
+every object by the same amount. About a fifth of faces are left bare.

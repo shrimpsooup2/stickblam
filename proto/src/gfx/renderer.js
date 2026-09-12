@@ -155,24 +155,36 @@ export function createRenderer(canvas) {
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, sheet);
     gl.generateMipmap(gl.TEXTURE_2D);
   };
+  // NOTE: a hand-drawn sheet replaces the INK only. The scrap mask keeps being
+  // generated, so a drawn-over template still sits on a torn piece of paper.
   sheet.onerror = () => {};
   sheet.src = 'sprites.png';
 
-  const gunTex = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, gunTex);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, vm.canvas);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  const atlasTex = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, atlasTex);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, atlas.canvas);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.generateMipmap(gl.TEXTURE_2D);
+  // Four sheets: ink and scrap-mask, for the weapon and for the players. They
+  // cannot be one RGBA sheet each -- filtering drags the transparent surround
+  // into the paper colour and puts a grey halo on every torn edge.
+  const sheet2D = (src, mips) => {
+    const t = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, src);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER,
+                     mips ? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    if (mips) gl.generateMipmap(gl.TEXTURE_2D);
+    return t;
+  };
+  const gunTex   = sheet2D(vm.canvas, false);
+  const gunMask  = sheet2D(vm.mask, false);
+  const atlasTex = sheet2D(atlas.canvas, true);
+  const atlasMask = sheet2D(atlas.mask, true);
+
+  function upload(tex, src, mips) {
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, src);
+    if (mips) gl.generateMipmap(gl.TEXTURE_2D);
+  }
 
   const proj = G.mat4(), view = G.mat4(), vp = G.mat4();
   let gbuf = null, W = 0, H = 0;
@@ -202,17 +214,18 @@ export function createRenderer(canvas) {
     if (boil !== lastBoil && !handDrawn) {
       lastBoil = boil;
       atlas.redraw(boil);
-      gl.bindTexture(gl.TEXTURE_2D, atlasTex);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, atlas.canvas);
-      gl.generateMipmap(gl.TEXTURE_2D);
+      upload(atlasTex, atlas.canvas, true);
+      upload(atlasMask, atlas.mask, true);
       vm.redraw(boil);
-      gl.bindTexture(gl.TEXTURE_2D, gunTex);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, vm.canvas);
+      upload(gunTex, vm.canvas, false);
+      upload(gunMask, vm.mask, false);
     } else if (boil !== lastBoil) {
       lastBoil = boil;
+      atlas.redraw(boil);
+      upload(atlasMask, atlas.mask, true);   // the scrap is ours even when the ink is not
       vm.redraw(boil);
-      gl.bindTexture(gl.TEXTURE_2D, gunTex);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, vm.canvas);
+      upload(gunTex, vm.canvas, false);
+      upload(gunMask, vm.mask, false);
     }
     lastCam.x = cam.x; lastCam.y = cam.y; lastCam.z = cam.z;
     G.perspective(proj, cam.fov, W / H, 0.05, 260);
@@ -224,8 +237,8 @@ export function createRenderer(canvas) {
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
     gl.disable(gl.BLEND);
-    gl.clearColor(0.93, 0.93, 0.91, 1);
-    gl.clearBufferfv(gl.COLOR, 0, [0.93, 0.93, 0.91, 1]);
+    gl.clearColor(1, 1, 1, 1);
+    gl.clearBufferfv(gl.COLOR, 0, [1, 1, 1, 1]);
     gl.clearBufferfv(gl.COLOR, 1, [0.5, 0.5, 1.0, 1.0]);
     gl.clear(gl.DEPTH_BUFFER_BIT);
 
@@ -240,6 +253,8 @@ export function createRenderer(canvas) {
     gl.uniform3f(boxProg.u.uLightDir, 0.45, 0.82, 0.35);
     gl.uniform3f(boxProg.u.uCamPos, cam.x, cam.y, cam.z);
     gl.uniform1f(boxProg.u.uFar, 260);
+    gl.uniform2f(boxProg.u.uScreen, W, H);
+    gl.uniform1f(boxProg.u.uHatch, post.hatch);
     gl.bindVertexArray(boxVAO);
     gl.bindBuffer(gl.ARRAY_BUFFER, boxInst);
     gl.bufferData(gl.ARRAY_BUFFER, boxData.subarray(0, n * 8), gl.DYNAMIC_DRAW);
@@ -257,9 +272,13 @@ export function createRenderer(canvas) {
       gl.uniform3f(spriteProg.u.uUp, 0, 1, 0);
       gl.uniform3f(spriteProg.u.uCamPos, cam.x, cam.y, cam.z);
       gl.uniform2f(spriteProg.u.uAtlasTexel, 1 / atlas.canvas.width, 1 / atlas.canvas.height);
+      gl.uniform1f(spriteProg.u.uFar, 260);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, atlasTex);
       gl.uniform1i(spriteProg.u.uAtlas, 0);
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, atlasMask);
+      gl.uniform1i(spriteProg.u.uMask, 1);
       gl.bindVertexArray(sprVAO);
       gl.bindBuffer(gl.ARRAY_BUFFER, sprInst);
       gl.bufferData(gl.ARRAY_BUFFER, sprData.subarray(0, m * 12), gl.DYNAMIC_DRAW);
@@ -272,6 +291,8 @@ export function createRenderer(canvas) {
       for (const v of lines) { if (k >= 8192 * 4) break; lineData[k++] = v; }
       gl.useProgram(lineProg.program);
       gl.uniformMatrix4fv(lineProg.u.uViewProj, false, vp);
+      gl.uniform3f(lineProg.u.uCamPos, cam.x, cam.y, cam.z);
+      gl.uniform1f(lineProg.u.uFar, 260);
       gl.bindVertexArray(lineVAO);
       gl.bindBuffer(gl.ARRAY_BUFFER, lineVBO);
       gl.bufferData(gl.ARRAY_BUFFER, lineData.subarray(0, k), gl.DYNAMIC_DRAW);
@@ -311,10 +332,13 @@ export function createRenderer(canvas) {
       gl.useProgram(vmProg.program);
       gl.uniform4f(vmProg.u.uRect, v.cx, v.cy, v.hw, v.hh);
       gl.uniform1f(vmProg.u.uRot, v.rot);
-      gl.uniform2f(vmProg.u.uCell, v.cell * 0.5, 0.5);
+      const c = vm.cell(v.weapon | 0, v.cell > 0.5);
+      gl.uniform4f(vmProg.u.uCell, c.x, c.y, c.w, c.h);
       gl.uniform1f(vmProg.u.uAspect, W / H);
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, gunTex);
       gl.uniform1i(vmProg.u.uGun, 0);
+      gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, gunMask);
+      gl.uniform1i(vmProg.u.uGunMask, 1);
       gl.bindVertexArray(vmVAO);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
       gl.enable(gl.DEPTH_TEST);
@@ -332,7 +356,6 @@ export function createRenderer(canvas) {
     gl.uniform2f(postProg.u.uTexel, 1 / W, 1 / H);
     gl.uniform1f(postProg.u.uTime, post.time);
     gl.uniform1f(postProg.u.uBoil, Math.floor(post.time * BOIL_FPS));
-    gl.uniform1f(postProg.u.uHatch, post.hatch);
     gl.uniform1f(postProg.u.uGrain, post.grain);
     gl.uniform1f(postProg.u.uOutline, post.outline);
     gl.uniform1f(postProg.u.uWarp, post.warp * (H / 700));
@@ -355,6 +378,6 @@ export function createRenderer(canvas) {
       dist: Math.hypot(x - lastCam.x, y - lastCam.y, z - lastCam.z),
     };
   }
-  return { gl, resize, render, atlas, project, setEdges, get edgeCount() { return edgeCount; },
+  return { gl, resize, render, atlas, weapons: vm.WEAPONS, project, setEdges, get edgeCount() { return edgeCount; },
     get handDrawn() { return !!handDrawn; }, get size() { return { W, H }; } };
 }

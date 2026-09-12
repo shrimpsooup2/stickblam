@@ -16,6 +16,7 @@ layout(location=3) in vec3 iSize;
 layout(location=4) in vec2 iTone;      // x = base tone, y = surface style
 
 uniform mat4 uViewProj;
+uniform vec2 uScreen;
 
 out vec3 vWorld;
 out vec3 vNormal;
@@ -23,6 +24,7 @@ out float vTone;
 out float vStyle;
 out float vBase;
 out float vSeed;
+out vec2 vAnchor;
 
 void main(){
   vec3 world = iCenter + aPos * iSize;
@@ -34,6 +36,11 @@ void main(){
   // Identical boxes must not fill with an identical value. One drawing is not
   // a tiling: the wash is uneven from shape to shape.
   vSeed   = fract(sin(dot(iCenter, vec3(12.98, 78.23, 37.72))) * 43758.5453);
+  // Where this object sits on the page. Shading is laid out relative to THIS,
+  // not to the screen, so the hatching travels with the object instead of the
+  // object sliding underneath a fixed screen pattern.
+  vec4 cc = uViewProj * vec4(iCenter, 1.0);
+  vAnchor = cc.w > 0.001 ? (cc.xy / cc.w * 0.5 + 0.5) * uScreen : vec2(0.0);
   gl_Position = uViewProj * vec4(world, 1.0);
 }`;
 
@@ -44,6 +51,7 @@ in float vTone;
 in float vStyle;
 in float vBase;
 in float vSeed;
+in vec2 vAnchor;
 
 layout(location=0) out vec4 oColor;
 layout(location=1) out vec4 oNormalDepth;
@@ -51,9 +59,30 @@ layout(location=1) out vec4 oNormalDepth;
 uniform vec3  uLightDir;
 uniform float uFar;
 uniform vec3  uCamPos;
+uniform float uHatch;
 
 float h11(float n){ return fract(sin(n * 78.233) * 43758.5453); }
 float h21(vec2 p){ return fract(sin(dot(p, vec2(41.7, 289.1))) * 43758.5453); }
+
+float vn(vec2 p){
+  vec2 i = floor(p), f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  float a = h21(i), b = h21(i + vec2(1,0));
+  float c = h21(i + vec2(0,1)), d = h21(i + vec2(1,1));
+  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+
+// The drawn palette. A render shades a face with a continuous ramp; a drawing
+// has a handful of values with borders between them. Nothing here reaches
+// white -- the bare page is the only true white in the world, the same way ink
+// is the only true black.
+float quantise(float t){
+  if (t > 0.905) return 0.925;
+  if (t > 0.760) return 0.870;
+  if (t > 0.590) return 0.745;
+  if (t > 0.420) return 0.555;
+  return 0.350;
+}
 
 // Repeated lines are the fastest way to look like a CAD texture. Every line
 // here bows on its own, carries its own weight, and drops segments where the
@@ -69,6 +98,17 @@ float drawnLines(vec2 p, float spacing, float seedOff){
   return smoothstep(0.10, 0.02, abs(f)) * weight * gap;
 }
 
+// One run of parallel strokes. Thin, with paper showing between them -- fat
+// strokes at a low duty cycle cross into each other and the face turns into
+// chain-link rather than shading.
+float strokes(vec2 p, float dens, float seedOff){
+  float wob = sin(p.y * 0.041 + seedOff) * 2.6 + sin(p.y * 0.013 + 1.7) * 4.2;
+  float a = (p.x + wob) * dens;
+  float i = floor(a);
+  float j = fract(a) + (h21(vec2(i, seedOff)) - 0.5) * 0.36;
+  return step(0.79, j) * step(0.14, h21(vec2(i, floor(p.y / 33.0) + seedOff)));
+}
+
 void main(){
   vec3 n = normalize(vNormal);
   float ndl = dot(n, normalize(uLightDir));
@@ -76,12 +116,8 @@ void main(){
   // Flat fills only. The reference leaves lit faces empty and hatches the
   // shadowed one, so lit sits near paper and shade drops into the hatch range.
   float band = ndl > 0.15 ? 1.0 : (n.y < -0.5 ? 0.50 : 0.66);
-  // Pulling every surface this hard toward paper left the whole frame inside a
-  // single palette step: a white ground, white faces, and the linework doing
-  // all the work. A drawing still has values -- keep real separation between
-  // the authored tones and let the haze close it with distance instead.
   float tone = mix(0.96, vTone, 0.50) * band;
-  tone *= 0.95 + 0.10 * vSeed;               // per-shape unevenness
+  tone *= 0.93 + 0.14 * vSeed;               // per-shape unevenness
 
   // Surface marks, projected onto whichever face this actually is -- the old
   // version used world xy on every wall, which slid sideways on half of them.
@@ -101,10 +137,54 @@ void main(){
   // --- aerial perspective ---
   // The single biggest depth cue available here. Distant geometry washes toward
   // the paper tone, exactly the way a pencil drawing lightens with distance.
-  // The post pass quantises this ramp, so it steps rather than gradients.
   float d = length(vWorld - uCamPos);
   float haze = 1.0 - exp(-d * 0.0082);
   tone = mix(tone, 0.93, haze * 0.66);
+
+  // --- flatten ---
+  // The roughening exists to TEAR A BORDER, not to add noise. Added
+  // unconditionally it punches through the middle of any face whose tone lands
+  // on a threshold, and a wall at point-blank range breaks into grey islands.
+  // Gating it on the local gradient is the fix: flat tone, no border to tear.
+  float rough = (vn(gl_FragCoord.xy / 17.0) - 0.5) * 0.038
+              + (vn(gl_FragCoord.xy /  5.5) - 0.5) * 0.024;
+  float gate = clamp(fwidth(tone) * 2600.0, 0.0, 1.0);
+  tone = quantise(clamp(tone + rough * gate, 0.0, 1.0));
+
+  // --- shading, per object and per face ---
+  // Hatching used to be one global screen-space pattern: every surface in the
+  // world carried the identical texture, and the world slid underneath it when
+  // the camera moved. Both are unnerving, and for the same reason -- the marks
+  // belong to the screen rather than to the thing being drawn.
+  //
+  // So the pattern is laid out around this object's own position on the page,
+  // which makes it travel with the object, and its angle, spacing and even
+  // whether it hatches at all vary per object AND per face. Somebody shading a
+  // drawing does not use one stroke direction for every plane in the picture,
+  // and does not shade every object the same amount.
+  float faceId = abs(n.x) > 0.5 ? 0.0 : (abs(n.y) > 0.5 ? 1.0 : 2.0);
+  float fs   = fract(vSeed * 13.73 + faceId * 0.41);
+  float ang  = (fs - 0.5) * 2.3;
+  float dens = 0.085 + 0.05 * fract(vSeed * 3.17 + faceId * 0.7);
+  float mode = fract(vSeed * 7.31 + faceId * 0.23);
+
+  vec2 hp = gl_FragCoord.xy - vAnchor;
+  vec2 h1 = vec2(hp.x * cos(ang) - hp.y * sin(ang), hp.x * sin(ang) + hp.y * cos(ang));
+
+  float h = 0.0;
+  if (mode > 0.20) {                                   // a fifth of faces stay bare
+    if (tone < 0.65) h = max(h, strokes(h1, dens, fs * 17.0));
+    if (tone < 0.45) {
+      if (mode > 0.68) {                               // crossed, on some faces only
+        float a2 = ang + 1.15;
+        vec2 h2 = vec2(hp.x * cos(a2) - hp.y * sin(a2), hp.x * sin(a2) + hp.y * cos(a2));
+        h = max(h, strokes(h2, dens * 0.9, fs * 31.0 + 5.0));
+      } else {                                         // or gone over again, same way
+        h = max(h, strokes(h1 + vec2(0.5 / dens, 0.0), dens, fs * 23.0 + 9.0));
+      }
+    }
+  }
+  tone = mix(tone, tone * 0.50, h * uHatch);
 
   oColor = vec4(vec3(tone), 1.0);
   oNormalDepth = vec4(n * 0.5 + 0.5, d / uFar);
@@ -150,16 +230,22 @@ in float vDist;
 layout(location=0) out vec4 oColor;
 layout(location=1) out vec4 oNormalDepth;
 
-uniform sampler2D uAtlas;
+uniform sampler2D uAtlas;   // ink coverage, in alpha
+uniform sampler2D uMask;    // the scrap's silhouette, in alpha
 uniform vec2 uAtlasTexel;
+uniform float uFar;
 
 void main(){
+  // The scrap decides what exists. Two sheets rather than one RGBA sheet,
+  // because filtering a single sheet drags the transparent surround into the
+  // paper colour and every torn edge comes back with a grey halo on it.
+  float m = texture(uMask, vUV, -0.5).a;
+  if (m < 0.45) discard;
+
   // A negative LOD bias plus an alpha re-sharpen keeps the linework present at
-  // range. Without it a stickman dissolves past ~15m: the mip chain averages a
-  // 2px stroke toward transparent and the alpha test then removes it entirely.
-  // Ink bleeds on paper. Dilating the strokes with distance keeps a stickman
-  // legible once it is only ~20px tall, where a sub-pixel line would otherwise
-  // average into nothing. This is the Phase 0 readability gate.
+  // range: the mip chain averages a 2px stroke toward nothing and the figure
+  // dissolves past ~15m. Ink bleeds on paper, so dilating the strokes with
+  // distance is both the fix and the right look.
   float bleed = clamp(vDist / 22.0, 0.0, 1.0);
   vec2 e = uAtlasTexel * (1.0 + bleed * 3.0);
   float a4 = texture(uAtlas, vUV, -0.65).a;
@@ -168,14 +254,24 @@ void main(){
   a4 = max(a4, texture(uAtlas, vUV + vec2(0.0,  e.y), -0.65).a);
   a4 = max(a4, texture(uAtlas, vUV + vec2(0.0, -e.y), -0.65).a);
   float a = smoothstep(0.10, 0.42, mix(texture(uAtlas, vUV, -0.65).a, a4, bleed));
-  if (a < 0.30) discard;
+
   // Ink is the only true black in the world; a loaded player renders darker.
-  float tone = mix(0.30, 0.02, vInk);
-  tone = mix(0.86, tone, a);        // soften only the true stroke edges
+  float ink = mix(0.30, 0.02, vInk);
+  // A scrap is brighter than anything in the world (max 0.925) and darker than
+  // the bare page (1.0). That ordering is what makes a player pop out of the
+  // background without ever being mistaken for sky.
+  float tone = mix(0.945, ink, a);          // paper first, ink on top of it
+  // the cut edge catches a little shade, so a scrap reads as a thing with a
+  // thickness rather than as a hole in the frame
+  tone *= 1.0 - (1.0 - smoothstep(0.45, 0.72, m)) * 0.22;
   float haze = 1.0 - exp(-vDist * 0.0082);
-  tone = mix(tone, 0.93, haze * 0.44);   // less than the world: keep players readable
+  tone = mix(tone, 0.93, haze * 0.44);      // less than the world: stay readable
   oColor = vec4(vec3(tone), 1.0);
-  oNormalDepth = vec4(0.5, 0.5, 1.0, gl_FragCoord.z * 0.999);
+  // LINEAR depth, the same convention the boxes write. gl_FragCoord.z is not
+  // that: it is ~0.99 for anything past a couple of metres, so the moment the
+  // post pass started treating far depth as bare page, every player in the
+  // world was flood-filled white. One buffer, one meaning.
+  oNormalDepth = vec4(0.5, 0.5, 1.0, vDist / uFar);
 }`;
 
 // ------------------------------------------------------------------- lines --
@@ -183,16 +279,24 @@ export const LINE_VS = HEAD + `
 layout(location=0) in vec3 aPos;
 layout(location=1) in float aInk;
 uniform mat4 uViewProj;
+uniform vec3 uCamPos;
+uniform float uFar;
 out float vInk;
-void main(){ vInk = aInk; gl_Position = uViewProj * vec4(aPos, 1.0); }`;
+out float vDepth;
+void main(){
+  vInk = aInk;
+  vDepth = length(aPos - uCamPos) / uFar;
+  gl_Position = uViewProj * vec4(aPos, 1.0);
+}`;
 
 export const LINE_FS = HEAD + `
 in float vInk;
+in float vDepth;
 layout(location=0) out vec4 oColor;
 layout(location=1) out vec4 oNormalDepth;
 void main(){
   oColor = vec4(vec3(0.04), vInk);
-  oNormalDepth = vec4(0.5, 0.5, 1.0, gl_FragCoord.z);
+  oNormalDepth = vec4(0.5, 0.5, 1.0, vDepth);
 }`;
 
 // ------------------------------------------------------------- viewmodel ----
@@ -202,14 +306,15 @@ export const VM_VS = HEAD + `
 layout(location=0) in vec2 aCorner;
 uniform vec4 uRect;      // cx, cy, halfW, halfH in NDC
 uniform float uRot;
-uniform vec2 uCell;      // atlas cell origin + size in UV (x, width)
+uniform vec4 uCell;      // atlas cell rect in UV: x, y, w, h
 uniform float uAspect;
 out vec2 vUV;
 void main(){
   vec2 p = aCorner * uRect.zw;
   float c = cos(uRot), s = sin(uRot);
   p = vec2(p.x * c - p.y * s * uAspect, p.x * s / uAspect + p.y * c);
-  vUV = vec2(uCell.x + (aCorner.x + 0.5) * uCell.y, 0.5 - aCorner.y);
+  vUV = vec2(uCell.x + (aCorner.x + 0.5) * uCell.z,
+             uCell.y + (0.5 - aCorner.y) * uCell.w);
   gl_Position = vec4(uRect.xy + p, 0.0, 1.0);
 }`;
 
@@ -218,10 +323,16 @@ in vec2 vUV;
 layout(location=0) out vec4 oColor;
 layout(location=1) out vec4 oNormalDepth;
 uniform sampler2D uGun;
+uniform sampler2D uGunMask;
 void main(){
-  float a = smoothstep(0.34, 0.56, texture(uGun, vUV).a);
-  if (a < 0.35) discard;
-  oColor = vec4(vec3(mix(0.75, 0.05, a)), 1.0);
+  // Same two-sheet arrangement as the players: the weapon is a drawing on a
+  // scrap, and the scrap is what occludes the world behind it.
+  float m = texture(uGunMask, vUV).a;
+  if (m < 0.45) discard;
+  float a = smoothstep(0.30, 0.58, texture(uGun, vUV).a);
+  float tone = mix(0.945, 0.05, a);
+  tone *= 1.0 - (1.0 - smoothstep(0.45, 0.72, m)) * 0.25;
+  oColor = vec4(vec3(tone), 1.0);
   oNormalDepth = vec4(0.5, 0.5, 1.0, 0.00015);   // nearest depth: never outlined against the world
 }`;
 
@@ -372,7 +483,6 @@ uniform sampler2D uNormalDepth;
 uniform vec2  uTexel;
 uniform float uTime;
 uniform float uBoil;        // quantised time: the grain redraws at 8fps, not 60
-uniform float uHatch;
 uniform float uGrain;
 uniform float uOutline;
 uniform float uWarp;
@@ -391,65 +501,32 @@ float vnoise(vec2 p){
   return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
 }
 
-// The drawn palette. A render has a continuous ramp; a drawing has a handful of
-// values with ragged borders between them. Quantising is what turns a SHADED
-// face into a FILLED one, and it is the single change that stops the frame
-// reading as a 3D viewport.
-float quantise(float t){
-  if (t > 0.905) return 0.955;   // paper: left empty
-  if (t > 0.760) return 0.885;   // a light wash
-  if (t > 0.590) return 0.755;   // hatched once
-  if (t > 0.420) return 0.560;   // hatched twice
-  return 0.355;                  // hatched three times
-}
-
-// Screen-space hatching. Shadow is drawn with a pen, never with a gradient.
-//
-// Two things decide whether this reads as pen or as a texture. The duty cycle:
-// a hatch line is thin, with plenty of paper showing between strokes. And the
-// DIRECTION: two layers at similar spacing crossing each other make a regular
-// diamond grid, which is chain-link, not shading. So darker tones get a second
-// run in the SAME direction rather than a crossing one, the spacing is jittered
-// per stroke, and hatching is reserved for genuinely dark faces -- a mid grey
-// is left as a flat fill, the way it would be on paper.
-float hatch(vec2 frag, float tone){
-  float h = 0.0;
-  float wob = sin(frag.y * 0.041) * 2.6 + sin(frag.y * 0.013 + 1.7) * 4.2;
-  float a = (frag.x + wob + frag.y * 0.55) * 0.105;
-
-  float ia = floor(a);
-  float ja = fract(a) + (hash(vec2(ia, 3.0)) - 0.5) * 0.36;
-  if (tone < 0.65)
-    h = max(h, step(0.80, ja) * step(0.14, hash(vec2(ia, floor(frag.y / 34.0)))));
-
-  float ib = floor(a + 0.5);
-  float jb = fract(a + 0.5) + (hash(vec2(ib, 9.0)) - 0.5) * 0.36;
-  if (tone < 0.45)
-    h = max(h, step(0.82, jb) * step(0.14, hash(vec2(ib, floor(frag.y / 29.0)))));
-
-  return h;
-}
-
 void main(){
-  // Everything above wobbles the LINES, but the fills still met the page along
-  // a mathematically exact silhouette -- and a perfectly crisp polygon edge is
-  // a render no matter what is drawn on top of it. Displacing the whole frame
-  // by a couple of pixels of slow noise puts every edge in the picture, fills
-  // included, slightly out of true, and ties the frame to one sheet of paper.
+  // Everything else wobbles the LINES, but the fills still met the page along a
+  // mathematically exact silhouette -- and a perfectly crisp polygon edge is a
+  // render no matter what is drawn on top of it. Displacing the whole frame by
+  // a couple of pixels of slow noise puts every edge slightly out of true and
+  // ties the frame to one sheet of paper.
   vec2 warp = vec2(vnoise(gl_FragCoord.xy / 29.0 + uBoil * 3.1) - 0.5,
                    vnoise(gl_FragCoord.xy / 29.0 + 11.0 + uBoil * 3.1) - 0.5) * uWarp;
   vec2 uv = vUV + warp * uTexel;
   vec3 col = texture(uColor, uv).rgb;
   vec4 nd  = texture(uNormalDepth, uv);
 
+  float d0 = nd.w;
+  // --- the sky is the bare page ---
+  // Grain, blotching, creases and vignette on empty sky give it a surface, and
+  // a surface reads as something you could walk into. Nothing is drawn there,
+  // so nothing is drawn there: flat, unshaded, and the only true white in the
+  // frame, which is what makes it unmistakably NOT a wall.
+  if (d0 > 0.985) { oColor = vec4(1.0); return; }
+
+  vec3  n0 = nd.xyz * 2.0 - 1.0;    // decode: the buffer stores n*0.5+0.5
   // --- outline ---
   // Depth must be compared RELATIVELY. An absolute threshold fires on every
   // distant surface seen at a grazing angle, which floods the frame with edges.
   // This only catches what the ink pass cannot: geometry too small to stroke.
   float e = 0.0;
-  vec3  n0 = nd.xyz * 2.0 - 1.0;    // decode: the buffer stores n*0.5+0.5
-  float d0 = nd.w;
-  bool sky = d0 > 0.985;
   for (int i = 0; i < 4; i++) {
     vec2 o = (i == 0) ? vec2(1.0, 0.0) : (i == 1) ? vec2(-1.0, 0.0)
            : (i == 2) ? vec2(0.0, 1.0) : vec2(0.0, -1.0);
@@ -465,45 +542,9 @@ void main(){
   // from, so the leftover outline is dashed rather than continuous
   e *= step(0.30, hash(floor(gl_FragCoord.xy / 3.0) + uBoil * 2.0)) * uOutline;
   e *= 1.0 - smoothstep(0.22, 0.80, d0);
-  if (sky) e = 0.0;
-
-  float tone = col.r;
-
-  // --- flatten ---
-  // Ink and the fringe around it stay continuous; everything above 0.34 snaps
-  // to the palette, along a border roughened by paper tooth so the step is a
-  // torn edge rather than a contour line.
-  // The sky is bare page and must stay bare page. Quantising it put a flat
-  // 0.93 field right on a palette threshold, so the roughening flipped it back
-  // and forth across the step and the whole upper frame broke into white
-  // islands -- damp-paper blotching at a scale nobody would ever draw.
-  if (tone > 0.34 && !sky) {
-    // The roughening must be LOW frequency. High-frequency noise on a shallow
-    // ramp does not tear the border, it dithers it -- the step dissolves into a
-    // 100px speckle field and the frame reads as dirt. Big slow wobbles give an
-    // edge that wanders like a wash line instead.
-    // Amplitude has to stay well under the smallest gap in the palette (0.070).
-    // Above that the noise stops tearing the border and starts punching holes
-    // through the middle of a fill, which reads as bleach stains.
-    // The roughening exists to TEAR A BORDER, not to add noise. Added
-    // unconditionally it also punches through the middle of any face whose tone
-    // happens to land on a threshold, and a big wall at point-blank range
-    // breaks into grey islands -- which is worse than the smooth ramp it
-    // replaced. Gating it on the local gradient is the fix: where the tone is
-    // flat there is no border to tear, so the perturbation goes to zero and the
-    // fill stays a fill. Where a real ramp crosses a threshold the gate opens
-    // and the step comes out ragged.
-    float rough = (vnoise(gl_FragCoord.xy / 17.0) - 0.5) * 0.038
-                + (vnoise(gl_FragCoord.xy /  5.5) - 0.5) * 0.024;
-    float gate = clamp(fwidth(tone) * 2600.0, 0.0, 1.0);
-    tone = quantise(clamp(tone + rough * gate, 0.0, 1.0));
-  }
-
-  float h = hatch(gl_FragCoord.xy, tone) * uHatch;
-  tone = mix(tone, tone * 0.50, h);
 
   // ink is the only true black: outlines go almost all the way down
-  tone = mix(tone, 0.05, e);
+  float tone = mix(col.r, 0.05, e);
 
   // --- paper ---
   // Grain is a SURFACE, not noise: coarse cells, tiny amplitude. At per-pixel

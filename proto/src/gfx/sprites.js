@@ -10,6 +10,8 @@
 // shader, because they have to be authored with habits, not applied as uniform
 // runtime noise.
 
+import { tornShape, tornPath, fillScrap, strokeScrap, bounds } from './paper.js';
+
 export const POSES = ['idle', 'run0', 'run1', 'run2', 'jump', 'fall', 'crumple', 'edge', 'glide', 'recover'];
 export const VARIANTS = 3;          // three different drawings co-exist, so two
                                     // stickmen side by side are never identical
@@ -232,22 +234,40 @@ export function poseGuide(name, seed) {
   return { head: sk.head, node, bbox: { minx, miny, maxx, maxy }, strokes: sk.strokes };
 }
 
-function drawStickman(ctx, name, seed) {
+function drawStickman(ctx, mtx, name, seed) {
   const r = rng(seed);
-  ctx.save();
+  ctx.save(); mtx.save();
   ctx.strokeStyle = '#fff';
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
+  mtx.fillStyle = '#fff';
 
   const sk = skeleton(name, r);
   // Thin lines against a big head -- that contrast is most of the look.
   const lw = CELL_W * 0.026 * (0.9 + r() * 0.26) * (0.75 + sk.scale * 0.25);
 
   if (sk.squash !== 1.0) {          // edge-on: the same skeleton, seen side-on
-    ctx.translate(CELL_W * 0.5, 0);
-    ctx.scale(sk.squash, 1);
-    ctx.translate(-CELL_W * 0.5, 0);
+    for (const g of [ctx, mtx]) {
+      g.translate(CELL_W * 0.5, 0);
+      g.scale(sk.squash, 1);
+      g.translate(-CELL_W * 0.5, 0);
+    }
   }
+
+  // --- the scrap ---
+  // A player is a drawing on a piece of paper torn out of a book, so the shape
+  // is cut round the figure loosely and the figure sits ON it. This is also
+  // what finally makes a stickman read at range: a white silhouette against the
+  // world carries much further than five thin strokes do.
+  const head = [{ x: sk.head.x - sk.head.rx, y: sk.head.y - sk.head.ry },
+                { x: sk.head.x + sk.head.rx, y: sk.head.y + sk.head.ry }];
+  const b = bounds([...sk.strokes, head], CELL_W * 0.05);
+  const cx = (b.minx + b.maxx) / 2, cy = (b.miny + b.maxy) / 2;
+  const rx = Math.min(CELL_W * 0.46, (b.maxx - b.minx) / 2 + CELL_W * 0.07);
+  const ry = Math.min(CELL_H * 0.46, (b.maxy - b.miny) / 2 + CELL_H * 0.035);
+  const scrap = tornPath(tornShape(cx, cy, rx, ry, r, 11), r, 0.04);
+  fillScrap(mtx, scrap);
+  strokeScrap(ctx, scrap, lw * 0.85, r);
 
   penBlob(ctx, sk.head, r, lw);
   for (const s of sk.strokes) penStroke(ctx, s, r, lw);
@@ -263,7 +283,7 @@ function drawStickman(ctx, name, seed) {
     ctx.lineTo(h.x + h.rx * 0.34, h.y - h.ry * 0.02);
     ctx.stroke();
   }
-  ctx.restore();
+  ctx.restore(); mtx.restore();
 }
 
 /**
@@ -273,9 +293,11 @@ function drawStickman(ctx, name, seed) {
 export function makeAtlas() {
   const rows = Math.ceil((POSES.length * VARIANTS) / COLS);
   const canvas = document.createElement('canvas');
-  canvas.width = COLS * CELL_W;
-  canvas.height = rows * CELL_H;
+  const mask = document.createElement('canvas');
+  canvas.width = mask.width = COLS * CELL_W;
+  canvas.height = mask.height = rows * CELL_H;
   const ctx = canvas.getContext('2d');
+  const mtx = mask.getContext('2d');
 
   const rects = {};
   let i = 0;
@@ -294,17 +316,21 @@ export function makeAtlas() {
 
   function redraw(tick) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    mtx.clearRect(0, 0, mask.width, mask.height);
     for (const c of cells) {
-      ctx.save();
-      ctx.translate(c.cx, c.cy);
-      ctx.beginPath(); ctx.rect(0, 0, CELL_W, CELL_H); ctx.clip();
+      ctx.save(); mtx.save();
+      for (const g of [ctx, mtx]) {
+        g.translate(c.cx, c.cy);
+        g.beginPath(); g.rect(0, 0, CELL_W, CELL_H); g.clip();
+      }
       // seed changes every boil tick -> genuinely new linework each time
-      drawStickman(ctx, c.name, (tick * 2654435761 + c.v * 40503 + c.name.charCodeAt(0) * 7919) >>> 0);
-      ctx.restore();
+      drawStickman(ctx, mtx, c.name,
+                   (tick * 2654435761 + c.v * 40503 + c.name.charCodeAt(0) * 7919) >>> 0);
+      ctx.restore(); mtx.restore();
     }
   }
   redraw(0);
-  return { canvas, rects, redraw };
+  return { canvas, mask, rects, redraw };
 }
 
 /**

@@ -11,6 +11,7 @@ export const BINDINGS = [
   ['Left mouse', 'fire'],
   ['V', 'first / third person'],
   ['M', 'next map'],
+  ['1 … 8  /  wheel', 'pick a weapon'],
   ['R', 'respawn'],
   ['H', 'show / hide panel'],
 ];
@@ -21,7 +22,7 @@ export function createInput(canvas) {
     fwd: 0, right: 0, jump: false, crouch: false, edge: false, glide: false,
     scoped: false, dx: 0, dy: 0, locked: false, shoot: false,
   };
-  const once = { view: false, respawn: false, panel: false, map: false };
+  const once = { view: false, respawn: false, panel: false, map: false, weapon: 0, cycle: 0 };
 
   const down = (e) => {
     if (e.repeat) return;
@@ -30,6 +31,7 @@ export function createInput(canvas) {
     if (e.code === 'KeyR') once.respawn = true;
     if (e.code === 'KeyH') once.panel = true;
     if (e.code === 'KeyM') once.map = true;
+    if (/^Digit[1-8]$/.test(e.code)) once.weapon = +e.code.slice(5);
     if (['Space', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'Tab'].includes(e.code)) e.preventDefault();
   };
   const up = (e) => keys.delete(e.code);
@@ -48,6 +50,11 @@ export function createInput(canvas) {
     if (e.button === 2) keys.delete('MouseR');
   });
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+  canvas.addEventListener('wheel', (e) => {
+    if (!state.locked) return;
+    e.preventDefault();
+    once.cycle += e.deltaY > 0 ? 1 : -1;
+  }, { passive: false });
 
   document.addEventListener('pointerlockchange', () => {
     state.locked = document.pointerLockElement === canvas;
@@ -70,7 +77,13 @@ export function createInput(canvas) {
     state.shoot  = keys.has('MouseL');
     return state;
   }
-  function consume(name) { const v = once[name]; once[name] = false; return v; }
+  // Numeric slots reset to 0, boolean latches to false -- so `weapon` and
+  // `cycle` come back as numbers and the rest come back as flags.
+  function consume(name) {
+    const v = once[name];
+    once[name] = typeof v === 'number' ? 0 : false;
+    return v;
+  }
   function consumeMouse() { const d = { dx: state.dx, dy: state.dy }; state.dx = 0; state.dy = 0; return d; }
   function firing() { return state.shoot && state.locked; }
 
