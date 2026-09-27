@@ -30,17 +30,20 @@ export default {
     b.ground(0, 0, W + 26, D + 26);
 
     // Tone by height, so the terraces separate instead of reading as one lump.
-    // The bands are the palette's, not a gradient -- see VISUAL_DIRECTION.md.
+    //
+    // Keep it LIGHT. The shader already drops unlit faces a long way and hatches
+    // whatever lands dark enough, so authoring a dark tone on top of that put
+    // nearly every face in the map at the bottom of the palette, cross-hatched,
+    // and the whole thing came out as one black mass. The authored tone picks
+    // which plane you are looking at; the lighting decides how dark it goes.
     const band = (top) => {
-      if (top < 1.6) return [TONE.light, STYLE.plain];
-      if (top < 5.0) return [TONE.block, STYLE.plain];
-      if (top < 9.0) return [TONE.wall, STYLE.grid];
-      return [TONE.dark, STYLE.grid];
+      if (top < 2.5) return TONE.floor;
+      if (top < 6.0) return TONE.light;
+      if (top < 11.0) return TONE.block;
+      return TONE.wall;
     };
-    for (const [x, y, z, sx, sy, sz] of BOXES) {
-      const [tone, style] = band(y + sy / 2);
-      b.box(x, y, z, sx, sy, sz, tone, style, 'concrete');
-    }
+    for (const [x, y, z, sx, sy, sz] of BOXES)
+      b.box(x, y, z, sx, sy, sz, band(y + sy / 2), STYLE.plain, 'concrete');
 
     // Spawns at opposite corners of the open ground, facing in.
     b.spawn(0, -W / 2 - 7, 0.1, 0, Math.PI * 0.5);

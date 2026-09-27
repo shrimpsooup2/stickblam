@@ -145,8 +145,19 @@ export function createRenderer(canvas) {
           q[v] += (s & 2) ? EPS : -EPS;
           if (solidAt(q[0], q[1], q[2])) { n++; quad |= 1 << s; }
         }
-        if (n === 4) continue;                       // buried inside the solid
-        // two solids sharing a side means the surface runs straight through
+        // Count the solid quadrants around the edge line and read off what
+        // kind of edge this is:
+        //   4  buried inside the solid
+        //   3  a CONCAVE crease -- where two surfaces fold inward
+        //   2  adjacent: the surface runs flat straight through
+        //      diagonal: a saddle, which is a real edge
+        //   1  a convex corner: the silhouette of the shape
+        // Only 1 and the saddle get a pen. Dropping the concave creases is the
+        // single biggest thing: a voxelised massing is nothing BUT inside
+        // corners, and drawing every one of them is what turned the map into a
+        // grid of stripes. Someone drawing a building draws its corners against
+        // the sky, not every angle where two walls meet.
+        if (n === 4 || n === 3) continue;
         if (n === 2 && quad !== 0b1001 && quad !== 0b0110) continue;
         return true;
       }
