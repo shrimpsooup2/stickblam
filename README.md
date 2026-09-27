@@ -59,5 +59,8 @@ open-questions sections are the point — read those first if you want to argue.
 
 ## Third-party assets
 
+The Drawer uses ["LOWPOLY | FPS | TDM | GAME | MAP by ResoForge"](https://sketchfab.com/3d-models/lowpoly-fps-tdm-game-map-by-resoforge-d41a19f699ea421a9aa32b407cb7537b)
+by [Space_One](https://sketchfab.com/aslbekburonbey), licensed under [CC-BY-4.0](http://creativecommons.org/licenses/by/4.0/).
+
 The Slab uses ["Brutalist Concrete Map (Free Retro Prop)"](https://sketchfab.com/3d-models/brutalist-concrete-map-free-retro-prop-1635f8a5869d45ea8347eae136df657b)
 by [TRYFIELD](https://sketchfab.com/tryfield), licensed under [CC-BY-4.0](http://creativecommons.org/licenses/by/4.0/).

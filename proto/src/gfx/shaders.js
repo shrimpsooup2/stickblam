@@ -115,7 +115,12 @@ void main(){
 
   // Flat fills only. The reference leaves lit faces empty and hatches the
   // shadowed one, so lit sits near paper and shade drops into the hatch range.
-  float band = ndl > 0.15 ? 1.0 : (n.y < -0.5 ? 0.50 : 0.66);
+  // How far an unlit face drops. This sets which AUTHORED tones end up in the
+  // hatch range once they are shaded, and at 0.66 that was nearly all of them:
+  // stand anywhere facing away from the light and the whole screen was hatch.
+  // At 0.74 the light end of the palette shades to a flat grey and only
+  // genuinely dark materials get a pen, so the map decides what hatches.
+  float band = ndl > 0.15 ? 1.0 : (n.y < -0.5 ? 0.58 : 0.74);
   float tone = mix(0.96, vTone, 0.50) * band;
   tone *= 0.93 + 0.14 * vSeed;               // per-shape unevenness
 

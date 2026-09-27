@@ -283,7 +283,27 @@ Two things an import does **not** give you, and both are the whole job:
   have to be authored on top of it, and until they are, The Slab is a place to
   test movement against real geometry rather than a map anyone should play.
 
+### The Drawer
+
+The second import came in built as a map rather than as a prop, and it shows:
+a floor, two storeys, and interiors that are actually rooms. So the ground-fill
+pass The Slab needed is **off** here -- welding every column down to the floor
+would brick up the ground storey. Scale comes off the model's own storey
+height (0.91 model units between the floor and the upper slab, x3.8 for a 3.4m
+storey), which is a better anchor than guessing at the footprint.
+
+Spawns are probed rather than placed by eye: sample the floor on a grid, keep
+cells with headroom, measure elbow room out to six metres, and take the most
+open cell at each end. The first hand-guessed pair put you on the apron facing
+the back of an end wall.
+
 ### Credits
+
+The Drawer is built from **"LOWPOLY | FPS | TDM | GAME | MAP by ResoForge"**
+(https://sketchfab.com/3d-models/lowpoly-fps-tdm-game-map-by-resoforge-d41a19f699ea421a9aa32b407cb7537b)
+by **Space_One** (https://sketchfab.com/aslbekburonbey), licensed under
+[CC-BY-4.0](http://creativecommons.org/licenses/by/4.0/). Source geometry is in
+`assets/arena-drawer/`.
 
 The Slab is built from **"Brutalist Concrete Map (Free Retro Prop)"**
 (https://sketchfab.com/3d-models/brutalist-concrete-map-free-retro-prop-1635f8a5869d45ea8347eae136df657b)
