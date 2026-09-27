@@ -94,8 +94,65 @@ export function createRenderer(canvas) {
    * throws away individual edges. Using one number for both was wrong: a 4m
    * platform 0.3m thick kept its top and bottom rectangles and lost all four
    * corner uprights, so it read as two floating outlines instead of a slab.
+   *
+   * Edges are then CULLED against the solid they belong to. A box's twelve
+   * edges are only edges of the box; most of them are not edges of the SHAPE,
+   * because a neighbouring box continues the surface straight through. Nobody
+   * notices on a hand-laid map where boxes rarely touch -- but an imported mesh
+   * arrives as a thousand voxel-merged boxes all sharing faces, and inking
+   * every seam turns the frame into wireframe spaghetti. So each edge is probed
+   * on the four sides of its own line: buried on all four, or continuing flat
+   * through two, and no pen would have been put there.
    */
   function setEdges(boxes, minBox = 0.8, minEdge = 0.2, strokes = 2) {
+    // Spatial hash over the boxes, so the probes below stay cheap on a map with
+    // a thousand of them.
+    const CELL = 4;
+    const hash = new Map();
+    const key = (x, y, z) => x + ',' + y + ',' + z;
+    const cell = (v) => Math.floor(v / CELL);
+    boxes.forEach((b, i) => {
+      const [cx, cy, cz, sx, sy, sz] = b;
+      for (let x = cell(cx - sx / 2); x <= cell(cx + sx / 2); x++)
+      for (let y = cell(cy - sy / 2); y <= cell(cy + sy / 2); y++)
+      for (let z = cell(cz - sz / 2); z <= cell(cz + sz / 2); z++) {
+        const k = key(x, y, z);
+        const a = hash.get(k);
+        if (a) a.push(i); else hash.set(k, [i]);
+      }
+    });
+    const solidAt = (x, y, z) => {
+      const a = hash.get(key(cell(x), cell(y), cell(z)));
+      if (!a) return false;
+      for (const i of a) {
+        const [cx, cy, cz, sx, sy, sz] = boxes[i];
+        if (Math.abs(x - cx) < sx / 2 && Math.abs(y - cy) < sy / 2 && Math.abs(z - cz) < sz / 2)
+          return true;
+      }
+      return false;
+    };
+    // Probe just off the edge line, on all four sides.
+    const EPS = 0.045;
+    const exposed = (A, B) => {
+      const ax = Math.abs(B[0] - A[0]) > 1e-6 ? 0 : (Math.abs(B[1] - A[1]) > 1e-6 ? 1 : 2);
+      const u = (ax + 1) % 3, v = (ax + 2) % 3;
+      for (const t of [0.17, 0.5, 0.83]) {
+        const p = [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t];
+        let n = 0, quad = 0;
+        for (let s = 0; s < 4; s++) {
+          const q = p.slice();
+          q[u] += (s & 1) ? EPS : -EPS;
+          q[v] += (s & 2) ? EPS : -EPS;
+          if (solidAt(q[0], q[1], q[2])) { n++; quad |= 1 << s; }
+        }
+        if (n === 4) continue;                       // buried inside the solid
+        // two solids sharing a side means the surface runs straight through
+        if (n === 2 && quad !== 0b1001 && quad !== 0b0110) continue;
+        return true;
+      }
+      return false;
+    };
+
     const data = [];
     for (const b of boxes) {
       const [cx, cy, cz, sx, sy, sz] = b;
@@ -110,6 +167,7 @@ export function createRenderer(canvas) {
       for (let e = 0; e < E.length; e++) {
         const A = c[E[e][0]], B = c[E[e][1]];
         if (Math.hypot(B[0]-A[0], B[1]-A[1], B[2]-A[2]) < minEdge) continue;
+        if (!exposed(A, B)) continue;
         const seed = (cx * 7.13 + cy * 3.71 + cz * 11.9 + e * 17.3) % 997;
         // Not every line is gone over the same number of times. A third of them
         // get a third pass, so line weight varies edge to edge and not just

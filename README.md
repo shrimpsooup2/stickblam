@@ -56,3 +56,8 @@ greys, a rich player is literally the darkest, most visible thing on the map.
 
 Pre-production. Nothing is built. Everything in these docs is a proposal, and the
 open-questions sections are the point — read those first if you want to argue.
+
+## Third-party assets
+
+The Slab uses ["Brutalist Concrete Map (Free Retro Prop)"](https://sketchfab.com/3d-models/brutalist-concrete-map-free-retro-prop-1635f8a5869d45ea8347eae136df657b)
+by [TRYFIELD](https://sketchfab.com/tryfield), licensed under [CC-BY-4.0](http://creativecommons.org/licenses/by/4.0/).

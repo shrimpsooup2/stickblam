@@ -231,5 +231,5 @@ function frame(now) {
 }
 requestAnimationFrame(frame);
 window.__stickblam = { player, get sim() { return sim; }, get level() { return level; },
-  T, post, gun, MAPS, loadMap, get mapIndex() { return mapIndex; }, gl: renderer.gl, atlas: renderer.atlas,
+  T, post, gun, MAPS, loadMap, get mapIndex() { return mapIndex; }, gl: renderer.gl, atlas: renderer.atlas, get edgeCount(){ return renderer.edgeCount; },
   get spriteCount(){ return sprites.length / 12; }, get firstSprite(){ return sprites.slice(0,12); } };

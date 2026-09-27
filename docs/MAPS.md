@@ -255,3 +255,38 @@ second choice and arguably more on-theme for a folded page.
    crossing." A map with deliberate slot-gaps and firing lines might be the fifth.
 5. **Nothing is tested at all.** These are blockouts. Every claim above is a
    prediction.
+
+
+---
+
+## Imported maps
+
+`proto/tools/import_gltf.mjs` turns a glTF mesh into the axis-aligned boxes the
+solver collides against: rasterise the triangles into a voxel grid, flood the
+outside so enclosed space counts as solid, fill the hollows a player could not
+stand up in, then greedily merge the voxels into boxes.
+
+Voxel size is the dial that matters. It trades fidelity against box count, and
+box count drives both the renderer's instance cap and how much linework the ink
+pass has to draw. For the model below: 0.4m gives 1,464 boxes and ~14,000 ink
+strokes; 1.0m gives 439 boxes and ~6,900, which is where the hand-laid maps sit.
+The detail you buy at 0.4m is detail you cannot stand on.
+
+Two things an import does **not** give you, and both are the whole job:
+
+- **A floor.** Models of this kind are dioramas — the geometry hangs in space
+  with nothing under it. `levels/concrete.js` adds the ground.
+- **A map.** Flooding the top surfaces of the raw model with the player's real
+  step height and jump apex reaches about 6% of them: it is a pile of separate
+  blocks, not a connected arena. What the import gives you is *massing* — cover,
+  rooftops, sightline blockers. Spawns, routes, chokes and the loops in §1 still
+  have to be authored on top of it, and until they are, The Slab is a place to
+  test movement against real geometry rather than a map anyone should play.
+
+### Credits
+
+The Slab is built from **"Brutalist Concrete Map (Free Retro Prop)"**
+(https://sketchfab.com/3d-models/brutalist-concrete-map-free-retro-prop-1635f8a5869d45ea8347eae136df657b)
+by **TRYFIELD** (https://sketchfab.com/tryfield), licensed under
+[CC-BY-4.0](http://creativecommons.org/licenses/by/4.0/). Source geometry is in
+`assets/arena-desk/`, with the author's licence file alongside it.
